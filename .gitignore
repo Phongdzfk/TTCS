@@ -1,0 +1,22 @@
+# Node.js dependencies
+node_modules/
+**/node_modules/
+
+# Environment variables
+**/.env
+
+# Log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editor directories and files
+.vscode/
+*.code-workspace
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Build outputs (nếu có thể dùng Vite hoặc các tool build khác)
+dist/
