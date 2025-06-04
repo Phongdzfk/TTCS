@@ -98,3 +98,12 @@ exports.getProductById = async (req, res) => {
     res.status(404).json({ message: err.message });
   }
 };
+
+exports.getDiscountOfProduct = async (req, res) => {
+  try {
+    const discount = await productService.getDiscountOfProduct(req.params.id);
+    res.json({ discount });
+  } catch (err) {
+    res.status(500).json({ message: 'Lỗi server', error: err.message });
+  }
+};

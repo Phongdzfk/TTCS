@@ -48,7 +48,13 @@
                   <span class="text-muted">Bảo hành:</span> <span class="fw-medium">24 tháng</span>
                 </div>
               </div>
-              <div class="price mb-4">{{ formatPrice(product.price) }}</div>
+              <div class="price mb-4">
+                <span v-if="product.discount" class="sale-badge">-{{ product.discount.value }}%</span>
+                <span class="text-danger fw-bold">
+                  {{ formatPrice(product.discount ? product.price * (1 - product.discount.value / 100) : product.price) }}
+                </span>
+                <del v-if="product.discount" class="text-muted ms-2">{{ formatPrice(product.price) }}</del>
+              </div>
               <div class="product-short-desc mb-4">
                 <p>{{ product.description }}</p>
               </div>
@@ -88,6 +94,9 @@
             <li class="nav-item" role="presentation">
               <button class="nav-link" id="desc-tab" data-bs-toggle="tab" data-bs-target="#desc-tab-pane" type="button" role="tab" aria-controls="desc-tab-pane" aria-selected="false">Mô tả sản phẩm</button>
             </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="review-tab" data-bs-toggle="tab" data-bs-target="#review-tab-pane" type="button" role="tab" aria-controls="review-tab-pane" aria-selected="false">Đánh giá</button>
+            </li>
           </ul>
           <div class="tab-content" id="productTabContent">
             <div class="tab-pane fade show active" id="specs-tab-pane" role="tabpanel" aria-labelledby="specs-tab">
@@ -103,6 +112,39 @@
             <div class="tab-pane fade" id="desc-tab-pane" role="tabpanel" aria-labelledby="desc-tab">
               <div class="mt-3">
                 <p>{{ product.description }}</p>
+              </div>
+            </div>
+            <div class="tab-pane fade" id="review-tab-pane" role="tabpanel" aria-labelledby="review-tab">
+              <div class="mt-3">
+                <h5>Đánh giá sản phẩm</h5>
+                <template v-if="reviews.length === 0">
+                  <div class="text-muted mb-3">Chưa có đánh giá nào.</div>
+                </template>
+                <template v-else>
+                  <div v-for="(review, idx) in reviews" :key="idx" class="mb-3 border-bottom pb-2">
+                    <div>
+                      <b>{{ review.user }}</b>
+                      <span class="ms-2 text-warning">
+                        <i v-for="n in review.rating" :key="n" class="bi bi-star-fill"></i>
+                        <i v-for="n in (5 - review.rating)" :key="n" class="bi bi-star"></i>
+                      </span>
+                      <span class="text-muted ms-2">{{ formatDateTime(review.date) }}</span>
+                    </div>
+                    <div>{{ review.comment }}</div>
+                  </div>
+                </template>
+                <form class="mt-4" @submit.prevent="addReview">
+                  <div class="mb-2">
+                    <label class="form-label">Đánh giá của bạn:</label>
+                    <select v-model="newReviewRating" class="form-select w-auto d-inline-block ms-2">
+                      <option v-for="n in 5" :key="n" :value="n">{{ n }} sao</option>
+                    </select>
+                  </div>
+                  <div class="mb-2">
+                    <textarea v-model="newReviewComment" class="form-control" rows="2" placeholder="Nhận xét của bạn..."></textarea>
+                  </div>
+                  <button class="btn btn-primary" type="submit">Gửi đánh giá</button>
+                </form>
               </div>
             </div>
           </div>

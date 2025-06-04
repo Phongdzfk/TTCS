@@ -7,6 +7,7 @@ const authRoutes = require('./routes/auth');
 const productRoutes = require('./routes/product');
 const categoryRoutes = require('./routes/category');
 const userRoutes = require('./routes/user');
+const discountRoutes = require('./routes/discount');
 const path = require('path');
 
 const app = express();
@@ -24,6 +25,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/discounts', discountRoutes);
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 

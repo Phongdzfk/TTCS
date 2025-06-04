@@ -1,12 +1,18 @@
 <template>
   <div class="product-card h-100">
-    <img :src="product.image || 'https://via.placeholder.com/300x200'" class="card-img-top" :alt="product.name">
+    <div v-if="product.discount" class="sale-badge">-{{ product.discount.value }}%</div>
+    <img :src="getImageUrl(product.image)" class="card-img-top" :alt="product.name">
     <div class="card-body">
       <h5 class="card-title">{{ product.name }}</h5>
-      <div class="price">{{ formatPrice(product.price) }}</div>
+      <div class="price">
+        <span class="text-danger fw-bold">
+          {{ formatPrice(product.discount ? product.price * (1 - product.discount.value / 100) : product.price) }}
+        </span>
+        <del v-if="product.discount" class="text-muted ms-2">{{ formatPrice(product.price) }}</del>
+      </div>
       <p class="description">{{ product.description }}</p>
       <div class="d-flex justify-content-between align-items-center">
-        <router-link :to="'/products/' + product.productId" class="btn btn-detail">Chi tiết</router-link>
+        <router-link :to="'/products/' + (product.productID || product.productId)" class="btn btn-detail">Chi tiết</router-link>
         <button class="btn btn-cart" @click="addToCart(product)">
           <i class="bi bi-cart-plus"></i>
         </button>
@@ -23,12 +29,22 @@ export default {
       required: true
     }
   },
+  data() {
+    return {
+      BASE_URL: 'http://localhost:5000'
+    };
+  },
   methods: {
     formatPrice(price) {
       return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
     },
     addToCart(product) {
       this.$emit('add-to-cart', product);
+    },
+    getImageUrl(image) {
+      if (!image) return 'https://via.placeholder.com/300x200';
+      if (image.startsWith('http') || image.startsWith('/uploads/')) return image;
+      return this.BASE_URL + '/uploads/' + image;
     }
   }
 }

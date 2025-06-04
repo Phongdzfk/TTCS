@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 exports.getAllProducts = async (query) => {
-  const { search, categoryID, ...dynamicFilters } = query;
+  const { search, categoryID, hasDiscount, ...dynamicFilters } = query;
   let sql = 'SELECT p.productID, p.name, p.price, p.stockQuantity, p.description, p.categoryID, p.status, p.isFeatured, p.createdAt FROM tblProduct p WHERE 1=1';
   const params = [];
   if (categoryID) {
@@ -13,6 +13,10 @@ exports.getAllProducts = async (query) => {
   if (search) {
     sql += ' AND p.name LIKE ?';
     params.push('%' + search + '%');
+  }
+  // Lọc sản phẩm có discount nếu có hasDiscount
+  if (hasDiscount === 'true' || hasDiscount === true) {
+    sql += ' AND EXISTS (SELECT 1 FROM tblProductDiscount pd JOIN tblDiscount d ON pd.discountID = d.discountID WHERE pd.productID = p.productID AND d.endDate >= CURDATE())';
   }
   // Xử lý filter động (CPU, RAM, ...)
   const filterKeys = Object.keys(dynamicFilters);
@@ -34,6 +38,15 @@ exports.getAllProducts = async (query) => {
     p.attributes = atts.map(att => ({ key: att.attName, value: att.attValue }));
     const [imgs] = await db.query('SELECT imageUrl FROM tblProductImage WHERE productID=?', [p.productID]);
     p.images = imgs.map(img => img.imageUrl);
+    // Lấy discount hiện tại (nếu có)
+    const [discountRows] = await db.query(`
+      SELECT d.* FROM tblProductDiscount pd
+      JOIN tblDiscount d ON pd.discountID = d.discountID
+      WHERE pd.productID = ? AND d.endDate >= CURDATE()
+      ORDER BY d.endDate DESC
+      LIMIT 1
+    `, [p.productID]);
+    p.discount = discountRows[0] || null;
   }
   return products;
 };
@@ -180,12 +193,30 @@ exports.getFilterAttributes = async (categoryID) => {
 
 exports.getFeaturedProducts = async () => {
   const [products] = await db.query(
-    'SELECT productID, name, price, stockQuantity, description, categoryID, status, isFeatured, createdAt FROM tblProduct WHERE isFeatured = 1 ORDER BY createdAt DESC LIMIT 8'
+    'SELECT p.productID, p.name, p.price, p.stockQuantity, p.description, p.categoryID, p.status, p.isFeatured, p.createdAt, d.discountID, d.value, d.startDate, d.endDate, d.description as discountDescription, d.name as discountName FROM tblProduct p LEFT JOIN tblProductDiscount pd ON p.productID = pd.productID LEFT JOIN tblDiscount d ON pd.discountID = d.discountID WHERE p.isFeatured = 1 ORDER BY p.createdAt DESC LIMIT 8'
   );
   for (const p of products) {
     const [imgs] = await db.query('SELECT imageUrl FROM tblProductImage WHERE productID=?', [p.productID]);
     p.images = imgs.map(img => img.imageUrl);
     p.image = imgs.length > 0 ? imgs[0].imageUrl : null;
+    if (p.discountID) {
+      p.discount = {
+        discountID: p.discountID,
+        value: p.value,
+        startDate: p.startDate,
+        endDate: p.endDate,
+        description: p.discountDescription,
+        name: p.discountName
+      };
+    } else {
+      p.discount = null;
+    }
+    delete p.discountID;
+    delete p.value;
+    delete p.startDate;
+    delete p.endDate;
+    delete p.discountDescription;
+    delete p.discountName;
   }
   return products;
 };
@@ -198,5 +229,26 @@ exports.getProductById = async (productID) => {
   product.attributes = atts.map(att => ({ key: att.attName, value: att.attValue }));
   const [imgs] = await db.query('SELECT imageUrl FROM tblProductImage WHERE productID=?', [productID]);
   product.images = imgs.map(img => img.imageUrl);
+  product.image = imgs.length > 0 ? imgs[0].imageUrl : null;
+  // Lấy discount hiện tại (nếu có)
+  const [discountRows] = await db.query(`
+    SELECT d.* FROM tblProductDiscount pd
+    JOIN tblDiscount d ON pd.discountID = d.discountID
+    WHERE pd.productID = ? AND d.endDate >= CURDATE()
+    ORDER BY d.endDate DESC
+    LIMIT 1
+  `, [productID]);
+  product.discount = discountRows[0] || null;
   return product;
+};
+
+exports.getDiscountOfProduct = async (productID) => {
+  const [rows] = await db.query(`
+    SELECT d.* FROM tblProductDiscount pd
+    JOIN tblDiscount d ON pd.discountID = d.discountID
+    WHERE pd.productID = ?
+    ORDER BY d.endDate DESC
+    LIMIT 1
+  `, [productID]);
+  return rows[0] || null;
 };

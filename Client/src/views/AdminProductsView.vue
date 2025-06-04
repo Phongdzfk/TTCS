@@ -90,6 +90,9 @@
                     <button class="btn btn-sm btn-outline-primary" @click="editProduct(product)">
                       <i class="bi bi-pencil"></i>
                     </button>
+                    <button class="btn btn-sm btn-outline-success" @click="openDiscountModal(product)">
+                      <i class="bi bi-gift"></i>
+                    </button>
                     <button class="btn btn-sm btn-outline-danger" @click="deleteProduct(product)">
                       <i class="bi bi-trash"></i>
                     </button>
@@ -312,6 +315,99 @@
         </div>
       </div>
     </div>
+    
+    <!-- Modal Thêm khuyến mại cho sản phẩm -->
+    <div v-if="showDiscountModal" class="modal fade show d-block" tabindex="-1" aria-modal="true" style="background:rgba(0,0,0,0.3);">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Thêm khuyến mại cho sản phẩm: {{ selectedProductForDiscount?.name }}</h5>
+            <button type="button" class="btn-close" @click="closeDiscountModal"></button>
+          </div>
+          <div class="modal-body">
+            <template v-if="isLoadingCurrentDiscount">
+              <div class="text-center py-3"><div class="spinner-border"></div></div>
+            </template>
+            <template v-else-if="currentProductDiscount && !showDiscountForm">
+              <div class="alert alert-info">
+                <strong>Sản phẩm đã có khuyến mại:</strong><br>
+                <b>{{ currentProductDiscount.name }}</b> - {{ currentProductDiscount.value }}%<br>
+                {{ currentProductDiscount.description }}<br>
+                <span>Thời hạn: {{ currentProductDiscount.startDate }} - {{ currentProductDiscount.endDate }}</span>
+              </div>
+              <div class="text-center mt-3">
+                <button class="btn btn-warning" @click="showDiscountForm = true; loadDiscountList();"><i class="bi bi-arrow-repeat"></i> Thay đổi khuyến mại</button>
+              </div>
+            </template>
+            <template v-else>
+              <template v-if="!showDiscountForm">
+                <div v-if="isLoadingDiscounts" class="text-center py-3">
+                  <div class="spinner-border"></div>
+                </div>
+                <div v-else>
+                  <table class="table table-bordered align-middle">
+                    <thead class="table-light">
+                      <tr>
+                        <th>Tên khuyến mại</th>
+                        <th>Giá trị (%)</th>
+                        <th>Mô tả</th>
+                        <th>Thời hạn</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="discount in discountList" :key="discount.discountID">
+                        <td>{{ discount.name }}</td>
+                        <td>{{ discount.value }}</td>
+                        <td>{{ discount.description }}</td>
+                        <td>{{ discount.startDate }} - {{ discount.endDate }}</td>
+                        <td>
+                          <button class="btn btn-sm btn-success" @click="assignDiscountToProduct(discount)"><i class="bi bi-check2"></i> Chọn</button>
+                        </td>
+                      </tr>
+                      <tr v-if="discountList.length === 0">
+                        <td colspan="5" class="text-center text-muted">Không có khuyến mại nào còn hiệu lực</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <div class="text-center mt-3">
+                    <button class="btn btn-outline-primary" @click="showDiscountForm = true"><i class="bi bi-plus-lg"></i> Thêm khuyến mại mới</button>
+                  </div>
+                </div>
+              </template>
+              <template v-else>
+                <form @submit.prevent="saveDiscount">
+                  <div class="mb-3">
+                    <label class="form-label">Tên khuyến mại <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" v-model="discountForm.name" required>
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label">Giá trị (%) <span class="text-danger">*</span></label>
+                    <input type="number" class="form-control" v-model="discountForm.value" min="1" max="100" required>
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label">Mô tả</label>
+                    <textarea class="form-control" v-model="discountForm.description"></textarea>
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label">Ngày bắt đầu <span class="text-danger">*</span></label>
+                    <input type="date" class="form-control" v-model="discountForm.startDate" required>
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label">Ngày kết thúc <span class="text-danger">*</span></label>
+                    <input type="date" class="form-control" v-model="discountForm.endDate" required>
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @click="showDiscountForm = false">Quay lại</button>
+                    <button type="submit" class="btn btn-primary">Lưu</button>
+                  </div>
+                </form>
+              </template>
+            </template>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -346,7 +442,21 @@ export default {
         categoryID: '',
         attributes: [] // mảng {key, value}
       },
-      imagePreviews: []
+      imagePreviews: [],
+      showDiscountModal: false,
+      discountForm: {
+        name: '',
+        value: '',
+        description: '',
+        startDate: '',
+        endDate: ''
+      },
+      selectedProductForDiscount: null,
+      showDiscountForm: false,
+      discountList: [],
+      isLoadingDiscounts: false,
+      currentProductDiscount: null,
+      isLoadingCurrentDiscount: false
     }
   },
   computed: {
@@ -569,6 +679,74 @@ export default {
       this.searchQuery = '';
       this.categoryFilter = '';
       this.filterProducts();
+    },
+    openDiscountModal(product) {
+      this.selectedProductForDiscount = product;
+      this.discountForm = {
+        name: '',
+        value: '',
+        description: '',
+        startDate: '',
+        endDate: ''
+      };
+      this.showDiscountModal = true;
+      this.showDiscountForm = false;
+      this.discountList = [];
+      this.isLoadingDiscounts = false;
+      this.currentProductDiscount = null;
+      // Lấy discount hiện tại của sản phẩm
+      this.isLoadingCurrentDiscount = true;
+      axios.get(`${this.BASE_URL}/api/products/${product.productID}/discount`).then(res => {
+        this.currentProductDiscount = res.data.discount;
+        this.isLoadingCurrentDiscount = false;
+        if (!this.currentProductDiscount) {
+          this.loadDiscountList();
+        }
+      }).catch(() => {
+        this.currentProductDiscount = null;
+        this.isLoadingCurrentDiscount = false;
+        this.loadDiscountList();
+      });
+    },
+    loadDiscountList() {
+      this.isLoadingDiscounts = true;
+      axios.get(`${this.BASE_URL}/api/discounts`).then(res => {
+        const today = new Date();
+        this.discountList = (res.data.discounts || []).filter(d => {
+          const start = new Date(d.startDate);
+          const end = new Date(d.endDate);
+          return start <= today && end >= today;
+        });
+      }).finally(() => {
+        this.isLoadingDiscounts = false;
+      });
+    },
+    closeDiscountModal() {
+      this.showDiscountModal = false;
+      this.selectedProductForDiscount = null;
+      this.showDiscountForm = false;
+    },
+    assignDiscountToProduct(discount) {
+      if (!this.selectedProductForDiscount) return;
+      axios.put(`${this.BASE_URL}/api/discounts/${discount.discountID}`, { productID: this.selectedProductForDiscount.productID })
+        .then(() => {
+          alert('Đã gán khuyến mại cho sản phẩm!');
+          this.closeDiscountModal();
+        })
+        .catch(() => {
+          alert('Gán khuyến mại thất bại!');
+        });
+    },
+    saveDiscount() {
+      if (!this.selectedProductForDiscount) return;
+      axios.post(`${this.BASE_URL}/api/discounts`, { ...this.discountForm, productID: this.selectedProductForDiscount.productID })
+        .then(() => {
+          alert('Đã thêm và gán khuyến mại cho sản phẩm!');
+          this.closeDiscountModal();
+        })
+        .catch(() => {
+          alert('Thêm khuyến mại thất bại!');
+        });
     }
   }
 }

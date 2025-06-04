@@ -25,10 +25,10 @@
               <router-link class="nav-link" to="/products">Sản phẩm</router-link>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="#">Khuyến mãi</a>
+              <router-link class="nav-link" to="/promotions">Khuyến mãi</router-link>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="#">Tin tức</a>
+              <a class="nav-link" href="https://www.pcworld.com/news">Tin tức</a>
             </li>
           </ul>
           <div class="d-flex align-items-center">

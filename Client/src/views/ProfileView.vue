@@ -31,7 +31,14 @@
               <div class="profile-card-body">
                 <div class="profile-user-info text-center mb-4">
                   <div class="profile-user-avatar">
-                    <img :src="user.avatar || '@/assets/images/home/banner.jpg'" alt="User Avatar">
+                    <template v-if="user.avatar">
+                      <img :src="user.avatar" alt="User Avatar">
+                    </template>
+                    <template v-else>
+                      <div class="avatar-default-bg d-flex align-items-center justify-content-center">
+                        <i class="bi bi-person-fill fs-1 text-white"></i>
+                      </div>
+                    </template>
                   </div>
                   <h4 class="mt-3">{{ user.lastname }} {{ user.firstname }}</h4>
                   <div class="text-muted">{{ user.email }}</div>
@@ -383,6 +390,13 @@ export default {
 
 .btn-toggle-password:hover {
   background-color: #f8f9fa;
+}
+
+.avatar-default-bg {
+  width: 100%;
+  height: 100%;
+  background: #c82333;
+  border-radius: 50%;
 }
 
 @media (max-width: 768px) {

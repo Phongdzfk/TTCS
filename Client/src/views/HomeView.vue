@@ -15,7 +15,13 @@
             <div class="col-md-6">
               <h1 class="display-5 fw-bold">TPComputer</h1>
               <p class="lead">Chuyên cung cấp thiết bị điện tử, linh kiện máy tính chính hãng giá tốt</p>
-              <router-link to="/products" class="btn btn-primary btn-lg">Mua sắm ngay</router-link>
+              <router-link to="/products" class="btn btn-primary btn-lg btn-shop-now">Mua sắm ngay</router-link>
+              <p class="mt-3 home-intro">
+                <span class="intro-highlight text-white"><i class="bi bi-patch-check-fill"></i> TPComputer - Uy tín, chất lượng, giá tốt!</span><br>
+                <span class="intro-benefit text-white">✔ Sản phẩm chính hãng, bảo hành rõ ràng</span><br>
+                <span class="intro-benefit text-white">✔ Giao hàng toàn quốc, hỗ trợ tận tâm</span><br>
+                <span class="intro-benefit text-white">✔ Đa dạng linh kiện, thiết bị điện tử mới nhất</span>
+              </p>
             </div>
             <div class="col-md-6">
               <img src="@/assets/images/home/banner.jpg" class="img-fluid rounded shadow" alt="Banner">
@@ -54,15 +60,15 @@
           <div v-else class="row">
             <div v-for="item in productDiscounts" :key="item.productDiscountID" class="col-md-3 col-6 mb-4">
               <div class="product-card h-100">
-                <div class="sale-badge">-{{ item.value }}%</div>
-                <img :src="item.image" class="card-img-top" :alt="item.productName">
+                <div v-if="item.value" class="sale-badge">-{{ item.value }}%</div>
+                <img :src="item.image ? (BASE_URL + '/uploads/' + item.image) : require('@/assets/images/home/banner.jpg')" class="card-img-top" :alt="item.productName">
                 <div class="card-body">
                   <h5 class="card-title">{{ item.productName }}</h5>
                   <div class="price mb-2">
                     <span class="text-danger fw-bold">
-                      {{ formatPrice(item.price * (1 - item.value / 100)) }}
+                      {{ formatPrice(item.value ? item.price * (1 - item.value / 100) : item.price) }}
                     </span>
-                    <del class="text-muted ms-2">{{ formatPrice(item.price) }}</del>
+                    <del v-if="item.value" class="text-muted ms-2">{{ formatPrice(item.price) }}</del>
                   </div>
                   <div class="d-grid gap-2">
                     <button class="btn btn-cart" @click="addToCart(item)">
@@ -86,12 +92,16 @@
             </div>
             <div v-else v-for="product in featuredProducts" :key="product.productID" class="col-md-3 col-6 mb-4">
               <div class="product-card h-100">
+                <div v-if="product.discount" class="sale-badge">-{{ product.discount.value }}%</div>
                 <img :src="product.image ? (BASE_URL + '/uploads/' + product.image) : require('@/assets/images/home/banner.jpg')"
                   class="product-img-fit" :alt="product.name">
                 <div class="card-body">
                   <h5 class="card-title">{{ product.name }}</h5>
                   <div class="price mb-2">
-                    <span class="text-danger fw-bold">{{ formatPrice(product.price) }}</span>
+                    <span class="text-danger fw-bold">
+                      {{ formatPrice(product.discount ? product.price * (1 - product.discount.value / 100) : product.price) }}
+                    </span>
+                    <del v-if="product.discount" class="text-muted ms-2">{{ formatPrice(product.price) }}</del>
                   </div>
                   <div class="d-grid gap-2">
                     <router-link
@@ -245,5 +255,51 @@ export default {
 }
 .btn-detail-red:hover {
   background-color: #a51212 !important;
+}
+
+.btn-shop-now {
+  background-color: #fff !important;
+  color: #c82333 !important;
+  border: 2px solid #c82333 !important;
+  border-radius: 4px;
+  padding: 0.75rem 2rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  transition: background 0.2s, color 0.2s;
+}
+.btn-shop-now:hover {
+  background-color: #c82333 !important;
+  color: #fff !important;
+  border-color: #c82333 !important;
+}
+
+.home-intro {
+  font-size: 1.1rem;
+  color: #444;
+  margin-top: 1rem;
+  line-height: 1.7;
+}
+.intro-highlight {
+  color: #fff;
+  font-weight: 700;
+  font-size: 1.15rem;
+}
+.intro-benefit {
+  color: #fff;
+  font-size: 1rem;
+  margin-left: 8px;
+  font-weight: 600;
+}
+.benefit-green {
+  color: #28a745;
+}
+.benefit-blue {
+  color: #0d6efd;
+}
+.benefit-orange {
+  color: #fd7e14;
 }
 </style>

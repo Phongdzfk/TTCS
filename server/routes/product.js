@@ -32,4 +32,6 @@ router.post('/', upload.array('images'), productController.addProduct);
 router.put('/:id', upload.array('images'), productController.updateProduct);
 // Xóa sản phẩm
 router.delete('/:id', productController.deleteProduct);
+// Lấy discount hiện tại của sản phẩm
+router.get('/:id/discount', productController.getDiscountOfProduct);
 module.exports = router;

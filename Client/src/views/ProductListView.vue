@@ -18,7 +18,11 @@
     <div class="container-fluid py-5">
       <div class="container">
         <!-- Nút mở modal filter nâng cao -->
-        <button class="btn btn-outline-secondary mb-3" @click="showFilter = true">
+        <button
+          v-if="filterAttributes.length > 0"
+          class="btn btn-outline-secondary mb-3"
+          @click="showFilter = true"
+        >
           <i class="bi bi-funnel"></i> Lọc nâng cao
         </button>
         
@@ -226,7 +230,10 @@ export default {
       try {
         const res = await axios.get(BASE_URL + '/api/products/attributes', { params: { categoryID } });
         // Kỳ vọng trả về: [{ attName: 'CPU', values: ['i5', 'i7'] }, ...]
-        this.filterAttributes = res.data.attributes || [];
+        this.filterAttributes = (res.data.attributes || []).map(att => ({
+          ...att,
+          values: (att.values || []).filter(v => v)
+        }));
       } catch (e) {
         this.filterAttributes = [];
       }
