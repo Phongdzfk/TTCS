@@ -52,7 +52,7 @@
                         <tr v-for="item in cartItems" :key="item.productId">
                           <td>
                             <div class="d-flex align-items-center">
-                              <img :src="item.image" class="cart-item-image rounded" :alt="item.name">
+                              <img :src="server + item.image" class="cart-item-image rounded" :alt="item.name">
                               <div class="ms-3">
                                 <h6 class="mb-1">{{ item.name }}</h6>
                                 <small class="text-muted">{{ item.description }}</small>

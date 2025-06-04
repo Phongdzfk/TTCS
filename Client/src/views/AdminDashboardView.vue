@@ -18,6 +18,9 @@
             <router-link to="/admin/categories" class="list-group-item list-group-item-action">
               Quản lý danh mục
             </router-link>
+            <router-link to="/admin/statistics" class="list-group-item list-group-item-action">
+              Thống kê
+            </router-link>
           </div>
         </div>
 
