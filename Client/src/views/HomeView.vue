@@ -44,6 +44,11 @@
               </router-link>
             </div>
           </div>
+          <div class="text-center mt-4">
+            <router-link to="/products" class="btn btn-outline-primary">
+              <i class="bi bi-grid-3x3-gap me-2"></i>Xem thêm
+            </router-link>
+          </div>
         </div>
       </div>
 
@@ -52,6 +57,9 @@
         <div class="container">
           <div class="flash-sale-header d-flex justify-content-between align-items-center mb-4">
             <h2 class="section-title mb-0">Flash Sale</h2>
+            <router-link to="/promotions" class="btn btn-outline-primary">
+              <i class="bi bi-lightning-charge me-2"></i>Xem tất cả
+            </router-link>
           </div>
           <div v-if="loadingDiscount">Đang tải khuyến mãi...</div>
           <div v-else-if="productDiscounts.length === 0">
@@ -70,10 +78,20 @@
                     </span>
                     <del v-if="item.value" class="text-muted ms-2">{{ formatPrice(item.price) }}</del>
                   </div>
+                  <div v-if="item.description" class="discount-description mb-2 small text-muted">
+                    {{ item.description }}
+                  </div>
+                  <div v-if="item.endDate" class="countdown mb-2 small text-danger">
+                    <i class="bi bi-clock me-1"></i>Còn lại: {{ formatTimeLeft(item.endDate) }}
+                  </div>
                   <div class="d-grid gap-2">
-                    <button class="btn btn-cart" @click="addToCart(item)">
-                      <i class="bi bi-cart-plus"></i> Thêm vào giỏ
-                    </button>
+                    <router-link
+                      :to="{ path: '/products/' + item.productID, hash: '#top' }"
+                      class="btn btn-cart btn-detail-red"
+                      @click.native="scrollToTop"
+                    >
+                      <i class="bi bi-eye"></i> Xem chi tiết
+                    </router-link>
                   </div>
                 </div>
               </div>
@@ -259,7 +277,22 @@ export default {
     scrollToTop() {
       // Đảm bảo cuộn lên đầu trang khi vào ProductDetailView
       window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
+    },
+    formatTimeLeft(endDate) {
+      const end = new Date(endDate);
+      const now = new Date();
+      const diff = end - now;
+      
+      if (diff <= 0) return 'Đã kết thúc';
+      
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      
+      if (days > 0) return `${days} ngày ${hours} giờ`;
+      if (hours > 0) return `${hours} giờ ${minutes} phút`;
+      return `${minutes} phút`;
+    },
   }
 }
 </script>

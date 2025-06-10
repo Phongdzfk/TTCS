@@ -398,12 +398,30 @@ export default {
         console.error(err);
       }
     },
-    repurchase(order) {
-      // Giả lập thêm sản phẩm vào giỏ hàng
-      alert(`Đã thêm các sản phẩm từ đơn hàng #${order.orderID} vào giỏ hàng!`);
-      
-      // Chuyển hướng đến trang giỏ hàng
-      this.$router.push('/cart');
+    async repurchase(order) {
+      try {
+        // Lấy chi tiết đơn hàng
+        const response = await axios.get(`/api/orders/${order.orderID}`, {
+          headers: getAuthHeaders()
+        });
+        const orderDetails = response.data;
+
+        // Thêm từng sản phẩm vào giỏ hàng
+        for (const item of orderDetails.items) {
+          await axios.post('/api/cart/add', {
+            productId: item.productID,
+            quantity: item.quantity
+          }, {
+            headers: getAuthHeaders()
+          });
+        }
+
+        alert(`Đã thêm các sản phẩm từ đơn hàng #${order.orderID} vào giỏ hàng!`);
+        this.$router.push('/cart');
+      } catch (error) {
+        console.error('Error repurchasing:', error);
+        alert('Có lỗi xảy ra khi thêm sản phẩm vào giỏ hàng!');
+      }
     },
     filterOrders() {
       this.currentPage = 1;

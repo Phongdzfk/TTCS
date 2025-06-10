@@ -107,3 +107,16 @@ exports.getDiscountOfProduct = async (req, res) => {
     res.status(500).json({ message: 'Lỗi server', error: err.message });
   }
 };
+
+exports.assignDiscountToProduct = async (req, res) => {
+  try {
+    const { discountID } = req.body;
+    if (!discountID) {
+      return res.status(400).json({ message: 'Thiếu discountID!' });
+    }
+    await productService.assignDiscountToProduct(req.params.id, discountID);
+    res.json({ message: 'Gán khuyến mại thành công!' });
+  } catch (err) {
+    res.status(500).json({ message: 'Lỗi server', error: err.message });
+  }
+};

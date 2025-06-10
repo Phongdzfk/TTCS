@@ -10,6 +10,8 @@ const userRoutes = require('./routes/user');
 const discountRoutes = require('./routes/discount');
 const cartRoutes = require('./routes/cart');
 const orderRoutes = require('./routes/order');
+const reviewRoutes = require('./routes/review');
+const statisticsRoutes = require('./routes/statistics');
 const path = require('path');
 
 const app = express();
@@ -30,6 +32,8 @@ app.use('/api/users', userRoutes);
 app.use('/api/discounts', discountRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/reviews', reviewRoutes);
+app.use('/api/statistics', statisticsRoutes);
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 

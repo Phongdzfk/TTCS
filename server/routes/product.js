@@ -34,4 +34,8 @@ router.put('/:id', upload.array('images'), productController.updateProduct);
 router.delete('/:id', productController.deleteProduct);
 // Lấy discount hiện tại của sản phẩm
 router.get('/:id/discount', productController.getDiscountOfProduct);
+
+// Gán discount cho sản phẩm
+router.post('/:id/discount', productController.assignDiscountToProduct);
+
 module.exports = router;

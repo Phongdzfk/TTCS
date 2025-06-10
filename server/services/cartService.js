@@ -44,12 +44,28 @@ exports.addToCart = async (userId, productId, quantity) => {
   } else {
     cartID = carts[0].cartID;
   }
+
+  // Kiểm tra số lượng tồn kho
+  const [products] = await db.query('SELECT stockQuantity FROM tblproduct WHERE productID = ?', [productId]);
+  if (products.length === 0) {
+    throw new Error('Sản phẩm không tồn tại');
+  }
+  const stockQuantity = products[0].stockQuantity;
+
   // Kiểm tra sản phẩm đã có trong cart chưa
   const [items] = await db.query('SELECT * FROM tblcartdetail WHERE cartID = ? AND productID = ?', [cartID, productId]);
   if (items.length > 0) {
+    // Kiểm tra tổng số lượng sau khi thêm
+    const newQuantity = items[0].quantity + quantity;
+    if (newQuantity > stockQuantity) {
+      throw new Error('Số lượng sản phẩm trong giỏ hàng vượt quá số lượng tồn kho');
+    }
     // Nếu có rồi thì tăng số lượng
     await db.query('UPDATE tblcartdetail SET quantity = quantity + ? WHERE cartID = ? AND productID = ?', [quantity, cartID, productId]);
   } else {
+    if (quantity > stockQuantity) {
+      throw new Error('Số lượng sản phẩm vượt quá số lượng tồn kho');
+    }
     await db.query('INSERT INTO tblcartdetail (cartID, productID, quantity) VALUES (?, ?, ?)', [cartID, productId, quantity]);
   }
   return await exports.getCart(userId);
@@ -59,6 +75,18 @@ exports.updateCartItem = async (userId, productId, quantity) => {
   const [carts] = await db.query('SELECT * FROM tblcart WHERE userID = ?', [userId]);
   if (carts.length === 0) throw new Error('Cart not found');
   const cartID = carts[0].cartID;
+
+  // Kiểm tra số lượng tồn kho
+  const [products] = await db.query('SELECT stockQuantity FROM tblproduct WHERE productID = ?', [productId]);
+  if (products.length === 0) {
+    throw new Error('Sản phẩm không tồn tại');
+  }
+  const stockQuantity = products[0].stockQuantity;
+
+  if (quantity > stockQuantity) {
+    throw new Error('Số lượng sản phẩm vượt quá số lượng tồn kho');
+  }
+
   await db.query('UPDATE tblcartdetail SET quantity = ? WHERE cartID = ? AND productID = ?', [quantity, cartID, productId]);
   return await exports.getCart(userId);
 };

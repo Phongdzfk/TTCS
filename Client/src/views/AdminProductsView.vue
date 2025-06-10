@@ -728,13 +728,24 @@ export default {
     },
     assignDiscountToProduct(discount) {
       if (!this.selectedProductForDiscount) return;
-      axios.put(`${this.BASE_URL}/api/discounts/${discount.discountID}`, { productID: this.selectedProductForDiscount.productID })
-        .then(() => {
+      axios.post(`${this.BASE_URL}/api/products/${this.selectedProductForDiscount.productID}/discount`, {
+        discountID: discount.discountID
+      })
+        .then(async () => {
           alert('Đã gán khuyến mại cho sản phẩm!');
           this.closeDiscountModal();
+          // Refresh lại danh sách sản phẩm
+          try {
+            const res = await axios.get(`${this.BASE_URL}/api/products`);
+            this.products = res.data.products;
+            this.filteredProducts = this.products;
+            this.totalPages = Math.ceil(this.filteredProducts.length / this.pageSize);
+          } catch (err) {
+            console.error('Lỗi khi refresh danh sách sản phẩm:', err);
+          }
         })
-        .catch(() => {
-          alert('Gán khuyến mại thất bại!');
+        .catch((err) => {
+          alert(err.response?.data?.message || 'Gán khuyến mại thất bại!');
         });
     },
     saveDiscount() {

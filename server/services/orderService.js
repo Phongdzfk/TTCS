@@ -16,6 +16,21 @@ async function createOrderInDb(orderData, userID) {
   const conn = await db.getConnection();
   try {
     await conn.beginTransaction();
+
+    // Kiểm tra số lượng tồn kho cho tất cả sản phẩm
+    for (const item of orderItems) {
+      const [products] = await conn.query(
+        'SELECT stockQuantity FROM tblproduct WHERE productID = ?',
+        [item.productId]
+      );
+      if (products.length === 0) {
+        throw new Error(`Sản phẩm ID ${item.productId} không tồn tại`);
+      }
+      if (products[0].stockQuantity < item.quantity) {
+        throw new Error(`Sản phẩm ID ${item.productId} không đủ số lượng trong kho`);
+      }
+    }
+
     // 1. Tạo đơn hàng
     const status = customStatus || (paymentMethod === 'cod' ? 'pending' : 'pending');
     const [orderResult] = await conn.query(
@@ -30,8 +45,9 @@ async function createOrderInDb(orderData, userID) {
     );
     const orderID = orderResult.insertId;
 
-    // 2. Thêm chi tiết đơn hàng
+    // 2. Thêm chi tiết đơn hàng và cập nhật số lượng tồn kho
     for (const item of orderItems) {
+      // Thêm chi tiết đơn hàng
       await conn.query(
         'INSERT INTO tblorderdetail (orderID, productID, quantity, price) VALUES (?, ?, ?, ?)',
         [
@@ -40,6 +56,12 @@ async function createOrderInDb(orderData, userID) {
           item.quantity, 
           item.price
         ]
+      );
+
+      // Cập nhật số lượng tồn kho
+      await conn.query(
+        'UPDATE tblproduct SET stockQuantity = stockQuantity - ? WHERE productID = ?',
+        [item.quantity, item.productId]
       );
     }
 

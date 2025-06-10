@@ -252,3 +252,41 @@ exports.getDiscountOfProduct = async (productID) => {
   `, [productID]);
   return rows[0] || null;
 };
+
+exports.assignDiscountToProduct = async (productID, discountID) => {
+  const conn = await db.getConnection();
+  try {
+    await conn.beginTransaction();
+    
+    // Kiểm tra xem discount có tồn tại và còn hiệu lực không
+    const [discounts] = await conn.query(
+      'SELECT * FROM tblDiscount WHERE discountID = ? AND endDate >= CURDATE()',
+      [discountID]
+    );
+    if (discounts.length === 0) {
+      throw new Error('Khuyến mại không tồn tại hoặc đã hết hạn!');
+    }
+
+    // Kiểm tra xem sản phẩm có tồn tại không
+    const [products] = await conn.query('SELECT * FROM tblProduct WHERE productID = ?', [productID]);
+    if (products.length === 0) {
+      throw new Error('Sản phẩm không tồn tại!');
+    }
+
+    // Xóa discount cũ của sản phẩm (nếu có)
+    await conn.query('DELETE FROM tblProductDiscount WHERE productID = ?', [productID]);
+
+    // Thêm discount mới
+    await conn.query(
+      'INSERT INTO tblProductDiscount (productID, discountID) VALUES (?, ?)',
+      [productID, discountID]
+    );
+
+    await conn.commit();
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+};

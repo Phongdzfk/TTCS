@@ -55,7 +55,6 @@
                               <img :src="getImageUrl(item.image)" class="cart-item-image rounded" :alt="item.name">
                               <div class="ms-3">
                                 <h6 class="mb-1">{{ item.name }}</h6>
-                                <small class="text-muted">{{ item.description }}</small>
                               </div>
                             </div>
                           </td>

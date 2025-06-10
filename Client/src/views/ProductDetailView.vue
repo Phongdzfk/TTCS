@@ -129,6 +129,13 @@
                         <i v-for="n in (5 - review.rating)" :key="n" class="bi bi-star"></i>
                       </span>
                       <span class="text-muted ms-2">{{ formatDateTime(review.date) }}</span>
+                      <button
+                        v-if="canDeleteReview(review)"
+                        class="btn btn-sm btn-outline-danger ms-2"
+                        @click="deleteReview(review)"
+                      >
+                        <i class="bi bi-trash"></i>
+                      </button>
                     </div>
                     <div>{{ review.comment }}</div>
                   </div>
@@ -177,12 +184,58 @@ export default {
       quantity: 1,
       reviews: [],
       newReviewRating: 5,
-      newReviewComment: ''
+      newReviewComment: '',
+      userID: null,
+      roleID: null
     }
   },
   methods: {
     formatPrice(price) {
       return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
+    },
+    canDeleteReview(review) {
+      return this.roleID === 1 || review.userID === this.userID;
+    },
+    async deleteReview(review) {
+      if (!confirm('Bạn có chắc muốn xóa đánh giá này?')) return;
+      try {
+        await axios.delete(`${BASE_URL}/api/reviews/${review.reviewID}`, { headers: getAuthHeaders() });
+        await this.fetchReviews();
+        alert('Đã xóa đánh giá!');
+      } catch (e) {
+        alert('Không thể xóa đánh giá!');
+      }
+    },
+    async fetchReviews() {
+      if (!this.product) return;
+      try {
+        const res = await axios.get(`${BASE_URL}/api/reviews/${this.product.productId || this.product.productID}`);
+        this.reviews = (res.data.reviews || []).map(r => ({
+          reviewID: r.reviewID,
+          userID: r.userID,
+          user: (r.firstname || '') + ' ' + (r.lastname || ''),
+          rating: r.rating,
+          comment: r.comment,
+          date: r.reviewDate
+        }));
+      } catch (e) {
+        this.reviews = [];
+      }
+    },
+    async addReview() {
+      try {
+        await axios.post(`${BASE_URL}/api/reviews`, {
+          productID: this.product.productId || this.product.productID,
+          rating: this.newReviewRating,
+          comment: this.newReviewComment
+        }, { headers: getAuthHeaders() });
+        this.newReviewRating = 5;
+        this.newReviewComment = '';
+        await this.fetchReviews();
+        alert('Đã gửi đánh giá!');
+      } catch (e) {
+        alert('Bạn cần đăng nhập để đánh giá hoặc đã đánh giá rồi!');
+      }
     },
     async addToCart() {
       try {
@@ -201,11 +254,6 @@ export default {
     },
     formatDateTime(dateString) {
       return new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(dateString));
-    },
-    addReview() {
-      this.reviews.push({ user: 'Khách hàng', rating: this.newReviewRating, comment: this.newReviewComment, date: new Date() });
-      this.newReviewComment = '';
-      this.newReviewRating = 5;
     },
     async fetchProductDetail(productId) {
       try {
@@ -226,6 +274,10 @@ export default {
     // Lấy chi tiết sản phẩm từ API bằng this.$route.params.id
     const productId = this.$route.params.id;
     this.fetchProductDetail(productId);
+    // Sau khi load product, gọi fetchReviews
+    this.$watch('product', (val) => { if (val) this.fetchReviews(); }, { immediate: true });
+    this.userID = parseInt(localStorage.getItem('userID'));
+    this.roleID = parseInt(localStorage.getItem('roleID'));
   }
 }
 </script>
