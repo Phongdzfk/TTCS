@@ -1,0 +1,66 @@
+const db = require('../config/db');
+
+exports.getCart = async (userId) => {
+  // Lấy cartID của user
+  const [carts] = await db.query('SELECT * FROM tblcart WHERE userID = ?', [userId]);
+  let cartID;
+  if (carts.length === 0) {
+    // Nếu chưa có cart, tạo mới
+    const [result] = await db.query('INSERT INTO tblcart (userID, createdAt) VALUES (?, NOW())', [userId]);
+    cartID = result.insertId;
+  } else {
+    cartID = carts[0].cartID;
+  }
+  // Lấy các item trong cart
+  const [items] = await db.query(
+    `SELECT cd.productID as productId, p.name, p.price, cd.quantity, pi.imageUrl as image, p.description
+     FROM tblcartdetail cd
+     JOIN tblproduct p ON cd.productID = p.productID
+     LEFT JOIN tblproductimage pi ON p.productID = pi.productID
+     WHERE cd.cartID = ?` , [cartID]);
+  return items;
+};
+
+exports.addToCart = async (userId, productId, quantity) => {
+  // Lấy cartID
+  const [carts] = await db.query('SELECT * FROM tblcart WHERE userID = ?', [userId]);
+  let cartID;
+  if (carts.length === 0) {
+    const [result] = await db.query('INSERT INTO tblcart (userID, createdAt) VALUES (?, NOW())', [userId]);
+    cartID = result.insertId;
+  } else {
+    cartID = carts[0].cartID;
+  }
+  // Kiểm tra sản phẩm đã có trong cart chưa
+  const [items] = await db.query('SELECT * FROM tblcartdetail WHERE cartID = ? AND productID = ?', [cartID, productId]);
+  if (items.length > 0) {
+    // Nếu có rồi thì tăng số lượng
+    await db.query('UPDATE tblcartdetail SET quantity = quantity + ? WHERE cartID = ? AND productID = ?', [quantity, cartID, productId]);
+  } else {
+    await db.query('INSERT INTO tblcartdetail (cartID, productID, quantity) VALUES (?, ?, ?)', [cartID, productId, quantity]);
+  }
+  return await exports.getCart(userId);
+};
+
+exports.updateCartItem = async (userId, productId, quantity) => {
+  const [carts] = await db.query('SELECT * FROM tblcart WHERE userID = ?', [userId]);
+  if (carts.length === 0) throw new Error('Cart not found');
+  const cartID = carts[0].cartID;
+  await db.query('UPDATE tblcartdetail SET quantity = ? WHERE cartID = ? AND productID = ?', [quantity, cartID, productId]);
+  return await exports.getCart(userId);
+};
+
+exports.removeCartItem = async (userId, productId) => {
+  const [carts] = await db.query('SELECT * FROM tblcart WHERE userID = ?', [userId]);
+  if (carts.length === 0) throw new Error('Cart not found');
+  const cartID = carts[0].cartID;
+  await db.query('DELETE FROM tblcartdetail WHERE cartID = ? AND productID = ?', [cartID, productId]);
+  return await exports.getCart(userId);
+};
+
+exports.clearCart = async (userId) => {
+  const [carts] = await db.query('SELECT * FROM tblcart WHERE userID = ?', [userId]);
+  if (carts.length === 0) return;
+  const cartID = carts[0].cartID;
+  await db.query('DELETE FROM tblcartdetail WHERE cartID = ?', [cartID]);
+}; 

@@ -53,7 +53,7 @@
               </router-link>
               <router-link to="/cart" class="nav-icon position-relative">
                 <i class="bi bi-cart3"></i>
-                <span class="cart-count">0</span>
+                <span class="cart-count">{{ cartCount }}</span>
               </router-link>
             </div>
           </div>
@@ -70,11 +70,17 @@ export default {
     return {
       categories: [],
       BASE_URL: 'http://localhost:5000',
-      searchTerm: ''
+      searchTerm: '',
+      cartCount: 0
     }
   },
   mounted() {
     this.fetchCategories();
+    this.fetchCartCount();
+    window.addEventListener('cart-updated', this.handleCartUpdated);
+  },
+  beforeUnmount() {
+    window.removeEventListener('cart-updated', this.handleCartUpdated);
   },
   methods: {
     async fetchCategories() {
@@ -114,6 +120,19 @@ export default {
         this.$router.push({ path: '/products', query: { search: term } });
         this.searchTerm = '';
       }
+    },
+    async fetchCartCount() {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      try {
+        const res = await (await import('axios')).default.get(this.BASE_URL + '/api/cart', { headers: { Authorization: 'Bearer ' + token } });
+        this.cartCount = (res.data.cart || []).reduce((sum, i) => sum + i.quantity, 0);
+      } catch (e) {
+        this.cartCount = 0;
+      }
+    },
+    handleCartUpdated(e) {
+      this.cartCount = e.detail || 0;
     }
   }
 }

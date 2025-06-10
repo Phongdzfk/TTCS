@@ -130,6 +130,11 @@ import axios from 'axios';
 
 const BASE_URL = 'http://localhost:5000';
 
+function getAuthHeaders() {
+  const token = localStorage.getItem('token');
+  return { Authorization: 'Bearer ' + token };
+}
+
 export default {
   components: {
     ProductCard,
@@ -242,8 +247,20 @@ export default {
       this.searchKeyword = keyword;
       this.fetchProductsWithFilter();
     },
-    addToCart(product) {
-      alert(`Đã thêm ${product.name} vào giỏ hàng!`);
+    async addToCart(product) {
+      try {
+        await axios.post(`${BASE_URL}/api/cart/add`, {
+          productId: product.productId || product.productID,
+          quantity: 1
+        }, { headers: getAuthHeaders() });
+        this.$toast && this.$toast.success('Đã thêm vào giỏ hàng!');
+        // Lấy lại số lượng giỏ hàng
+        const res = await axios.get(`${BASE_URL}/api/cart`, { headers: getAuthHeaders() });
+        const count = (res.data.cart || []).reduce((sum, i) => sum + i.quantity, 0);
+        window.dispatchEvent(new CustomEvent('cart-updated', { detail: count }));
+      } catch (e) {
+        alert('Lỗi khi thêm vào giỏ hàng!');
+      }
     },
     resetFilters() {
       this.selectedCategory = '';

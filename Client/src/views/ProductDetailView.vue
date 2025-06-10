@@ -162,6 +162,11 @@ import ProductCard from '@/components/ProductCard.vue';
 import axios from 'axios';
 const BASE_URL = 'http://localhost:5000';
 
+function getAuthHeaders() {
+  const token = localStorage.getItem('token');
+  return { Authorization: 'Bearer ' + token };
+}
+
 export default {
   components: {
     ProductCard
@@ -179,9 +184,20 @@ export default {
     formatPrice(price) {
       return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
     },
-    addToCart() {
-      // Xử lý thêm vào giỏ hàng
-      alert(`Đã thêm ${this.product.name} vào giỏ hàng!`);
+    async addToCart() {
+      try {
+        await axios.post(`${BASE_URL}/api/cart/add`, {
+          productId: this.product.productId || this.product.productID,
+          quantity: this.quantity
+        }, { headers: getAuthHeaders() });
+        this.$toast && this.$toast.success('Đã thêm vào giỏ hàng!');
+        // Lấy lại số lượng giỏ hàng
+        const res = await axios.get(`${BASE_URL}/api/cart`, { headers: getAuthHeaders() });
+        const count = (res.data.cart || []).reduce((sum, i) => sum + i.quantity, 0);
+        window.dispatchEvent(new CustomEvent('cart-updated', { detail: count }));
+      } catch (e) {
+        alert('Lỗi khi thêm vào giỏ hàng!');
+      }
     },
     formatDateTime(dateString) {
       return new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(dateString));

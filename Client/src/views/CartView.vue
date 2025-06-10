@@ -52,7 +52,7 @@
                         <tr v-for="item in cartItems" :key="item.productId">
                           <td>
                             <div class="d-flex align-items-center">
-                              <img :src="server + item.image" class="cart-item-image rounded" :alt="item.name">
+                              <img :src="getImageUrl(item.image)" class="cart-item-image rounded" :alt="item.name">
                               <div class="ms-3">
                                 <h6 class="mb-1">{{ item.name }}</h6>
                                 <small class="text-muted">{{ item.description }}</small>
@@ -115,14 +115,6 @@
                     <span class="fw-bold text-primary">{{ formatPrice(total) }}</span>
                   </div>
                   
-                  <div class="mb-4">
-                    <label for="couponCode" class="form-label">Mã giảm giá</label>
-                    <div class="input-group">
-                      <input type="text" class="form-control" id="couponCode" v-model="couponCode" placeholder="Nhập mã giảm giá">
-                      <button class="btn btn-outline-primary" type="button" @click="applyCoupon">Áp dụng</button>
-                    </div>
-                  </div>
-                  
                   <router-link to="/checkout" class="btn btn-primary w-100">
                     Tiến hành thanh toán
                   </router-link>
@@ -147,28 +139,18 @@
 </template>
 
 <script>
+import axios from 'axios';
+const BASE_URL = 'http://localhost:5000';
+
+function getAuthHeaders() {
+  const token = localStorage.getItem('token');
+  return { Authorization: 'Bearer ' + token };
+}
+
 export default {
   data() {
     return {
-      cartItems: [
-        {
-          productId: 1,
-          name: 'Laptop Gaming Acer Nitro 5',
-          price: 22990000,
-          quantity: 1,
-          image: '@/assets/images/home/banner.jpg',
-          description: 'Core i7-11800H, RAM 16GB, SSD 512GB, RTX 3060'
-        },
-        {
-          productId: 3,
-          name: 'Màn hình Gaming 27" LG UltraGear',
-          price: 8990000,
-          quantity: 2,
-          image: '@/assets/images/home/banner.jpg',
-          description: '27 inch, QHD, IPS, 165Hz, 1ms'
-        }
-      ],
-      couponCode: ''
+      cartItems: [],
     }
   },
   computed: {
@@ -187,35 +169,61 @@ export default {
     formatPrice(price) {
       return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
     },
-    increaseQuantity(item) {
-      if (item.quantity < 10) {
-        item.quantity++;
-      }
+    getImageUrl(image) {
+      if (!image) return 'https://via.placeholder.com/80';
+      if (image.startsWith('http') || image.startsWith('/uploads/')) return image;
+      return BASE_URL + '/uploads/' + image;
     },
-    decreaseQuantity(item) {
-      if (item.quantity > 1) {
-        item.quantity--;
-      }
-    },
-    removeItem(item) {
-      this.cartItems = this.cartItems.filter(cartItem => cartItem.productId !== item.productId);
-    },
-    clearCart() {
-      if (confirm('Bạn có chắc muốn xóa tất cả sản phẩm trong giỏ hàng?')) {
+    async fetchCart() {
+      try {
+        const res = await axios.get(`${BASE_URL}/api/cart`, { headers: getAuthHeaders() });
+        this.cartItems = res.data.cart || [];
+        this.$emit && this.$emit('cart-updated', this.cartItems.reduce((sum, i) => sum + i.quantity, 0));
+      } catch (e) {
         this.cartItems = [];
+        this.$emit && this.$emit('cart-updated', 0);
       }
     },
-    updateCart() {
+    async increaseQuantity(item) {
+      if (item.quantity < 10) {
+        await this.updateCartItem(item.productId, item.quantity + 1);
+      }
+    },
+    async decreaseQuantity(item) {
+      if (item.quantity > 1) {
+        await this.updateCartItem(item.productId, item.quantity - 1);
+      }
+    },
+    async updateCartItem(productId, quantity) {
+      try {
+        const res = await axios.put(`${BASE_URL}/api/cart/update`, { productId, quantity }, { headers: getAuthHeaders() });
+        this.cartItems = res.data.cart || [];
+        this.$emit && this.$emit('cart-updated', this.cartItems.reduce((sum, i) => sum + i.quantity, 0));
+      } catch (e) {}
+    },
+    async removeItem(item) {
+      try {
+        await axios.delete(`${BASE_URL}/api/cart/remove/${item.productId}`, { headers: getAuthHeaders() });
+        await this.fetchCart();
+        this.$emit && this.$emit('cart-updated', this.cartItems.reduce((sum, i) => sum + i.quantity, 0));
+      } catch (e) {}
+    },
+    async clearCart() {
+      if (confirm('Bạn có chắc muốn xóa tất cả sản phẩm trong giỏ hàng?')) {
+        try {
+          await axios.delete(`${BASE_URL}/api/cart/clear`, { headers: getAuthHeaders() });
+          this.cartItems = [];
+          this.$emit && this.$emit('cart-updated', 0);
+        } catch (e) {}
+      }
+    },
+    async updateCart() {
+      await this.fetchCart();
       alert('Giỏ hàng đã được cập nhật!');
-    },
-    applyCoupon() {
-      if (this.couponCode) {
-        alert(`Đã áp dụng mã giảm giá: ${this.couponCode}`);
-        this.couponCode = '';
-      } else {
-        alert('Vui lòng nhập mã giảm giá!');
-      }
     }
+  },
+  mounted() {
+    this.fetchCart();
   }
 }
 </script>

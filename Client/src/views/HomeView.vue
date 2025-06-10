@@ -61,7 +61,7 @@
             <div v-for="item in productDiscounts" :key="item.productDiscountID" class="col-md-3 col-6 mb-4">
               <div class="product-card h-100">
                 <div v-if="item.value" class="sale-badge">-{{ item.value }}%</div>
-                <img :src="item.image ? (BASE_URL + '/uploads/' + item.image) : require('@/assets/images/home/banner.jpg')" class="card-img-top" :alt="item.productName">
+                <img :src="getImageUrl(item.image)" class="card-img-top" :alt="item.productName">
                 <div class="card-body">
                   <h5 class="card-title">{{ item.productName }}</h5>
                   <div class="price mb-2">
@@ -93,8 +93,7 @@
             <div v-else v-for="product in featuredProducts" :key="product.productID" class="col-md-3 col-6 mb-4">
               <div class="product-card h-100">
                 <div v-if="product.discount" class="sale-badge">-{{ product.discount.value }}%</div>
-                <img :src="product.image ? (BASE_URL + '/uploads/' + product.image) : require('@/assets/images/home/banner.jpg')"
-                  class="product-img-fit" :alt="product.name">
+                <img :src="getImageUrl(product.image)" class="product-img-fit" :alt="product.name">
                 <div class="card-body">
                   <h5 class="card-title">{{ product.name }}</h5>
                   <div class="price mb-2">
@@ -151,6 +150,15 @@
 </template>
 
 <script>
+import axios from 'axios';
+
+const BASE_URL = 'http://localhost:5000';
+
+function getAuthHeaders() {
+  const token = localStorage.getItem('token');
+  return { Authorization: 'Bearer ' + token };
+}
+
 export default {
   data() {
     return {
@@ -159,7 +167,6 @@ export default {
       isLoggedIn: false,
       productDiscounts: [],
       loadingDiscount: true,
-      BASE_URL: 'http://localhost:5000'
     }
   },
   mounted() {
@@ -175,6 +182,11 @@ export default {
     formatPrice(price) {
       return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
     },
+    getImageUrl(image) {
+      if (!image) return 'https://via.placeholder.com/300x200';
+      if (image.startsWith('http') || image.startsWith('/uploads/')) return image;
+      return 'http://localhost:5000/uploads/' + image;
+    },
     iconClassForCategory(cat) {
       switch ((cat.name || '').toLowerCase()) {
         case 'laptop':
@@ -189,8 +201,20 @@ export default {
           return 'bi bi-tags';
       }
     },
-    addToCart(product) {
-      alert(`Đã thêm ${product.productName || product.name} vào giỏ hàng!`);
+    async addToCart(product) {
+      try {
+        await axios.post(`${BASE_URL}/api/cart/add`, {
+          productId: product.productId || product.productID,
+          quantity: 1
+        }, { headers: getAuthHeaders() });
+        alert('Đã thêm vào giỏ hàng!');
+        // Lấy lại số lượng giỏ hàng
+        const res = await axios.get(`${BASE_URL}/api/cart`, { headers: getAuthHeaders() });
+        const count = (res.data.cart || []).reduce((sum, i) => sum + i.quantity, 0);
+        window.dispatchEvent(new CustomEvent('cart-updated', { detail: count }));
+      } catch (e) {
+        alert('Lỗi khi thêm vào giỏ hàng!');
+      }
     },
     async fetchCategories() {
       try {
