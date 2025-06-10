@@ -60,44 +60,25 @@
                   <div class="row mb-3">
                     <div class="col-md-6 mb-3 mb-md-0">
                       <label for="firstName" class="form-label">Họ <span class="text-danger">*</span></label>
-                      <input type="text" class="form-control" id="firstName" v-model="customer.firstName" required>
+                      <input type="text" class="form-control" id="firstName" v-model="customer.firstName" disabled>
                     </div>
                     <div class="col-md-6">
                       <label for="lastName" class="form-label">Tên <span class="text-danger">*</span></label>
-                      <input type="text" class="form-control" id="lastName" v-model="customer.lastName" required>
+                      <input type="text" class="form-control" id="lastName" v-model="customer.lastName" disabled>
                     </div>
                   </div>
-
                   <div class="mb-3">
                     <label for="email" class="form-label">Email <span class="text-danger">*</span></label>
-                    <input type="email" class="form-control" id="email" v-model="customer.email" required>
+                    <input type="email" class="form-control" id="email" v-model="customer.email" disabled>
                   </div>
-
                   <div class="mb-3">
                     <label for="phone" class="form-label">Số điện thoại <span class="text-danger">*</span></label>
-                    <input type="tel" class="form-control" id="phone" v-model="customer.phone" required>
+                    <input type="tel" class="form-control" id="phone" v-model="customer.phone" disabled>
                   </div>
-
                   <div class="mb-3">
                     <label for="address" class="form-label">Địa chỉ <span class="text-danger">*</span></label>
                     <input type="text" class="form-control" id="address" v-model="customer.address" required>
                   </div>
-
-                  <div class="row mb-3">
-                    <div class="col-md-4 mb-3 mb-md-0">
-                      <label for="city" class="form-label">Thành phố <span class="text-danger">*</span></label>
-                      <input type="text" class="form-control" id="city" v-model="customer.city" required>
-                    </div>
-                    <div class="col-md-4 mb-3 mb-md-0">
-                      <label for="district" class="form-label">Quận/Huyện <span class="text-danger">*</span></label>
-                      <input type="text" class="form-control" id="district" v-model="customer.district" required>
-                    </div>
-                    <div class="col-md-4">
-                      <label for="zipCode" class="form-label">Mã bưu điện</label>
-                      <input type="text" class="form-control" id="zipCode" v-model="customer.zipCode">
-                    </div>
-                  </div>
-
                   <div class="mb-3">
                     <label for="note" class="form-label">Ghi chú</label>
                     <textarea class="form-control" id="note" rows="3" v-model="customer.note"></textarea>
@@ -122,33 +103,13 @@
                       </div>
                     </label>
                   </div>
-                  <div class="form-check mb-3">
-                    <input class="form-check-input" type="radio" name="paymentMethod" id="banking" value="banking" v-model="paymentMethod">
-                    <label class="form-check-label d-flex align-items-center" for="banking">
-                      <i class="bi bi-bank me-2 fs-4"></i>
-                      <div>
-                        <div>Chuyển khoản ngân hàng</div>
-                        <small class="text-muted">Thanh toán qua tài khoản ngân hàng</small>
-                      </div>
-                    </label>
-                  </div>
-                  <div class="form-check mb-3">
-                    <input class="form-check-input" type="radio" name="paymentMethod" id="credit" value="credit" v-model="paymentMethod">
-                    <label class="form-check-label d-flex align-items-center" for="credit">
-                      <i class="bi bi-credit-card me-2 fs-4"></i>
-                      <div>
-                        <div>Thẻ tín dụng/Ghi nợ</div>
-                        <small class="text-muted">Thanh toán an toàn qua cổng thanh toán</small>
-                      </div>
-                    </label>
-                  </div>
                   <div class="form-check">
-                    <input class="form-check-input" type="radio" name="paymentMethod" id="ewallet" value="ewallet" v-model="paymentMethod">
-                    <label class="form-check-label d-flex align-items-center" for="ewallet">
-                      <i class="bi bi-wallet2 me-2 fs-4"></i>
+                    <input class="form-check-input" type="radio" name="paymentMethod" id="vietqr" value="vietqr" v-model="paymentMethod">
+                    <label class="form-check-label d-flex align-items-center" for="vietqr">
+                      <img src="https://img.vietqr.io/image/VCB-0123456789-compact2.png" alt="VietQR" style="height: 24px;" class="me-2" />
                       <div>
-                        <div>Ví điện tử</div>
-                        <small class="text-muted">Thanh toán qua Momo, ZaloPay, VNPay</small>
+                        <div>VietQR (Chuyển khoản ngân hàng)</div>
+                        <small class="text-muted">Quét mã QR để chuyển khoản nhanh</small>
                       </div>
                     </label>
                   </div>
@@ -171,8 +132,22 @@
                       <div class="ms-3">
                         <h6 class="mb-1">{{ item.name }}</h6>
                         <div class="d-flex justify-content-between">
-                          <small class="text-muted">{{ formatPrice(item.price) }} x {{ item.quantity }}</small>
-                          <span class="fw-bold">{{ formatPrice(item.price * item.quantity) }}</span>
+                          <small class="text-muted">
+                            <span v-if="item.discount">
+                              {{ formatPrice(item.price * (1 - item.discount.value / 100)) }} x {{ item.quantity }}
+                            </span>
+                            <span v-else>
+                              {{ formatPrice(item.price) }} x {{ item.quantity }}
+                            </span>
+                          </small>
+                          <span class="fw-bold">
+                            <span v-if="item.discount">
+                              {{ formatPrice((item.price * (1 - item.discount.value / 100)) * item.quantity) }}
+                            </span>
+                            <span v-else>
+                              {{ formatPrice(item.price * item.quantity) }}
+                            </span>
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -188,17 +163,6 @@
                 <div class="d-flex justify-content-between mb-2">
                   <span>Phí vận chuyển:</span>
                   <span>{{ formatPrice(shippingFee) }}</span>
-                </div>
-                <div class="d-flex justify-content-between mb-3">
-                  <span>Giảm giá:</span>
-                  <span>-{{ formatPrice(discount) }}</span>
-                </div>
-
-                <div class="mb-3">
-                  <div class="input-group">
-                    <input type="text" class="form-control" placeholder="Mã giảm giá" v-model="couponCode">
-                    <button class="btn btn-outline-primary" type="button" @click="applyCoupon">Áp dụng</button>
-                  </div>
                 </div>
 
                 <hr>
@@ -223,10 +187,34 @@
         </div>
       </div>
     </div>
+
+    <template v-if="showVietQr">
+      <div class="modal fade show d-block" tabindex="-1" style="background:rgba(0,0,0,0.3);">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">Quét mã VietQR để thanh toán</h5>
+              <button type="button" class="btn-close" @click="showVietQr = false"></button>
+            </div>
+            <div class="modal-body text-center">
+              <img :src="vietQrUrl" alt="VietQR" style="max-width: 300px; width: 100%;" />
+              <p class="mt-3">Mã đơn hàng: <b>{{ vietQrOrderId }}</b></p>
+              <p>Nội dung chuyển khoản: <b>Thanh toán đơn hàng {{ vietQrOrderId }}</b></p>
+              <p class="text-muted">Vui lòng chuyển khoản đúng nội dung để hệ thống xác nhận đơn hàng.</p>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" @click="showVietQr = false">Đóng</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </template>
   </div>
 </template>
 
 <script>
+import axios from 'axios';
+
 export default {
   data() {
     return {
@@ -242,67 +230,95 @@ export default {
         note: ''
       },
       paymentMethod: 'cod',
-      couponCode: '',
-      discount: 0,
       shippingFee: 30000,
-      orderItems: [
-        {
-          productId: 1,
-          name: 'Laptop Gaming Acer Nitro 5',
-          price: 22990000,
-          quantity: 1,
-          image: '@/assets/images/home/banner.jpg'
-        },
-        {
-          productId: 3,
-          name: 'Màn hình Gaming 27" LG UltraGear',
-          price: 8990000,
-          quantity: 2,
-          image: '@/assets/images/home/banner.jpg'
-        }
-      ]
+      orderItems: [],
+      showVietQr: false,
+      vietQrUrl: '',
+      vietQrOrderId: ''
     }
   },
   computed: {
     subtotal() {
-      return this.orderItems.reduce((total, item) => total + (item.price * item.quantity), 0);
+      return this.orderItems.reduce((total, item) => {
+        const price = item.discount ? item.price * (1 - item.discount.value / 100) : item.price;
+        return total + price * item.quantity;
+      }, 0);
     },
     total() {
-      return this.subtotal + this.shippingFee - this.discount;
+      return this.subtotal + this.shippingFee;
     }
   },
   methods: {
     formatPrice(price) {
       return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
     },
-    applyCoupon() {
-      if (this.couponCode) {
-        if (this.couponCode.toLowerCase() === 'giamgia10') {
-          this.discount = this.subtotal * 0.1;
-          alert('Áp dụng mã giảm giá thành công!');
-        } else {
-          alert('Mã giảm giá không hợp lệ!');
-          this.discount = 0;
-        }
-        this.couponCode = '';
-      } else {
-        alert('Vui lòng nhập mã giảm giá!');
-      }
-    },
-    placeOrder() {
-      // Kiểm tra thông tin khách hàng
-      if (!this.customer.firstName || !this.customer.lastName || !this.customer.email || 
-          !this.customer.phone || !this.customer.address || !this.customer.city || 
-          !this.customer.district) {
-        alert('Vui lòng điền đầy đủ thông tin giao hàng!');
+    async placeOrder() {
+      // Chỉ kiểm tra field địa chỉ
+      if (!this.customer.address) {
+        alert('Vui lòng điền địa chỉ giao hàng!');
         return;
       }
-      
-      // Xử lý đặt hàng
-      alert('Đặt hàng thành công! Cảm ơn bạn đã mua sắm tại TPComputer.');
-      
-      // Chuyển hướng đến trang hoàn tất
-      this.$router.push('/');
+
+      try {
+        const token = localStorage.getItem('token');
+        const res = await axios.post('http://localhost:5000/api/orders', {
+          customer: this.customer,
+          orderItems: this.orderItems,
+          paymentMethod: this.paymentMethod,
+          total: this.total
+        }, { headers: { Authorization: 'Bearer ' + token } });
+
+        if (this.paymentMethod === 'cod') {
+          alert('Đặt hàng thành công! Cảm ơn bạn đã mua sắm tại TPComputer.');
+          this.$router.push('/');
+        } else if (this.paymentMethod === 'vietqr' && res.data.qrUrl) {
+          // Hiển thị mã QR cho khách hàng quét
+          this.vietQrUrl = res.data.qrUrl;
+          this.vietQrOrderId = res.data.orderIdStr;
+          this.showVietQr = true;
+        }
+      } catch (e) {
+        console.error('Lỗi đặt hàng:', e);
+        alert(e.response?.data?.message || 'Có lỗi khi đặt hàng!');
+      }
+    }
+  },
+  async mounted() {
+    console.log('CheckoutView mounted!');
+    // Lấy thông tin user từ profile
+    try {
+      const token = localStorage.getItem('token');
+      const profileRes = await axios.get('http://localhost:5000/api/auth/profile', {
+        headers: { Authorization: 'Bearer ' + token }
+      });
+      const user = profileRes.data.user;
+      // Tự động điền thông tin từ profile
+      this.customer = {
+        firstName: user.firstname || '',
+        lastName: user.lastname || '',
+        email: user.email || '',
+        phone: user.phone || '',
+        address: user.address || '',
+        city: '',
+        district: '',
+        zipCode: '',
+        note: ''
+      };
+    } catch (e) {
+      console.error('Lỗi lấy thông tin user:', e);
+    }
+
+    // Lấy giỏ hàng thực tế từ backend
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.get('http://localhost:5000/api/cart', {
+        headers: { Authorization: 'Bearer ' + token }
+      });
+      this.orderItems = res.data.cart || [];
+      console.log('orderItems từ API cart:', this.orderItems);
+    } catch (e) {
+      this.orderItems = [];
+      console.error('Lỗi lấy giỏ hàng:', e);
     }
   }
 }

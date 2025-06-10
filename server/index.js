@@ -9,6 +9,7 @@ const categoryRoutes = require('./routes/category');
 const userRoutes = require('./routes/user');
 const discountRoutes = require('./routes/discount');
 const cartRoutes = require('./routes/cart');
+const orderRoutes = require('./routes/order');
 const path = require('path');
 
 const app = express();
@@ -28,6 +29,7 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/discounts', discountRoutes);
 app.use('/api/cart', cartRoutes);
+app.use('/api/orders', orderRoutes);
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 

@@ -13,12 +13,25 @@ exports.getCart = async (userId) => {
   }
   // Lấy các item trong cart
   const [items] = await db.query(
-    `SELECT cd.productID as productId, p.name, p.price, cd.quantity, pi.imageUrl as image, p.description
+    `SELECT cd.productID as productId, p.name, p.price, cd.quantity, pi.imageUrl as image, p.description,
+      d.discountID, d.value as discountValue, d.startDate as discountStart, d.endDate as discountEnd, d.description as discountDescription, d.name as discountName
      FROM tblcartdetail cd
      JOIN tblproduct p ON cd.productID = p.productID
      LEFT JOIN tblproductimage pi ON p.productID = pi.productID
+     LEFT JOIN tblProductDiscount pd ON p.productID = pd.productID
+     LEFT JOIN tblDiscount d ON pd.discountID = d.discountID AND d.endDate >= CURDATE()
      WHERE cd.cartID = ?` , [cartID]);
-  return items;
+  return items.map(item => ({
+    ...item,
+    discount: item.discountID ? {
+      discountID: item.discountID,
+      value: item.discountValue,
+      startDate: item.discountStart,
+      endDate: item.discountEnd,
+      description: item.discountDescription,
+      name: item.discountName
+    } : null
+  }));
 };
 
 exports.addToCart = async (userId, productId, quantity) => {

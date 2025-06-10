@@ -190,7 +190,7 @@ export default {
           productId: this.product.productId || this.product.productID,
           quantity: this.quantity
         }, { headers: getAuthHeaders() });
-        this.$toast && this.$toast.success('Đã thêm vào giỏ hàng!');
+        alert('Đã thêm vào giỏ hàng!');
         // Lấy lại số lượng giỏ hàng
         const res = await axios.get(`${BASE_URL}/api/cart`, { headers: getAuthHeaders() });
         const count = (res.data.cart || []).reduce((sum, i) => sum + i.quantity, 0);

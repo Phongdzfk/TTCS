@@ -59,7 +59,13 @@
                               </div>
                             </div>
                           </td>
-                          <td class="text-center align-middle">{{ formatPrice(item.price) }}</td>
+                          <td class="text-center align-middle">
+                            <div v-if="item.discount">
+                              <span class="text-danger fw-bold">{{ formatPrice(item.price * (1 - item.discount.value / 100)) }}</span>
+                              <del class="text-muted ms-2">{{ formatPrice(item.price) }}</del>
+                            </div>
+                            <div v-else>{{ formatPrice(item.price) }}</div>
+                          </td>
                           <td class="text-center align-middle">
                             <div class="quantity-control d-flex align-items-center justify-content-center">
                               <button class="btn btn-sm btn-outline-secondary" @click="decreaseQuantity(item)" :disabled="item.quantity <= 1">
@@ -71,7 +77,14 @@
                               </button>
                             </div>
                           </td>
-                          <td class="text-center align-middle fw-bold">{{ formatPrice(item.price * item.quantity) }}</td>
+                          <td class="text-center align-middle fw-bold">
+                            <span v-if="item.discount">
+                              {{ formatPrice((item.price * (1 - item.discount.value / 100)) * item.quantity) }}
+                            </span>
+                            <span v-else>
+                              {{ formatPrice(item.price * item.quantity) }}
+                            </span>
+                          </td>
                           <td class="text-center align-middle">
                             <button class="btn btn-sm btn-outline-danger" @click="removeItem(item)">
                               <i class="bi bi-trash"></i>
@@ -205,7 +218,8 @@ export default {
       try {
         await axios.delete(`${BASE_URL}/api/cart/remove/${item.productId}`, { headers: getAuthHeaders() });
         await this.fetchCart();
-        this.$emit && this.$emit('cart-updated', this.cartItems.reduce((sum, i) => sum + i.quantity, 0));
+        const count = this.cartItems.reduce((sum, i) => sum + i.quantity, 0);
+        window.dispatchEvent(new CustomEvent('cart-updated', { detail: count }));
       } catch (e) {}
     },
     async clearCart() {
