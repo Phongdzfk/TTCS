@@ -251,7 +251,14 @@
                 <tbody>
                   <tr v-for="(item, index) in selectedOrder.items" :key="index">
                     <td>{{ item.productName }}</td>
-                    <td><img :src="item.imageUrl" alt="Ảnh" style="width:50px;height:50px;object-fit:cover;"></td>
+                    <td>
+                      <img 
+                        :src="item.imageUrl ? `/uploads/${item.imageUrl}` : '/placeholder.jpg'" 
+                        :alt="item.productName"
+                        style="width:50px;height:50px;object-fit:cover;"
+                        class="img-thumbnail"
+                      >
+                    </td>
                     <td>{{ formatPrice(item.price) }}</td>
                     <td>{{ item.quantity }}</td>
                     <td>{{ formatPrice(item.price * item.quantity) }}</td>
@@ -274,6 +281,7 @@
 
 <script>
 import axios from 'axios';
+import { Modal } from 'bootstrap';
 
 function getAuthHeaders() {
   const token = localStorage.getItem('token');
@@ -290,7 +298,8 @@ export default {
       itemsPerPage: 10,
       selectedOrder: {},
       loading: false,
-      error: null
+      error: null,
+      orderDetailsModal: null
     };
   },
   computed: {
@@ -361,10 +370,18 @@ export default {
       };
       return classMap[status] || 'badge bg-secondary';
     },
-    viewOrderDetails(order) {
-      this.selectedOrder = order;
-      const modal = new bootstrap.Modal(document.getElementById('orderDetailsModal'));
-      modal.show();
+    async viewOrderDetails(order) {
+      try {
+        const response = await axios.get(`/api/orders/${order.orderID}`, {
+          headers: getAuthHeaders()
+        });
+        console.log('Order details response:', response.data);
+        this.selectedOrder = response.data;
+        this.orderDetailsModal.show();
+      } catch (err) {
+        console.error('Error fetching order details:', err);
+        alert('Không thể tải chi tiết đơn hàng');
+      }
     },
     canCancel(order) {
       return ['pending', 'waiting_payment', 'processing'].includes(order.status);
@@ -393,6 +410,7 @@ export default {
     }
   },
   mounted() {
+    this.orderDetailsModal = new Modal(document.getElementById('orderDetailsModal'));
     this.fetchOrders();
   }
 }

@@ -129,14 +129,14 @@ exports.getOrders = async ({ userID, page, limit, status, search, dateFrom, date
 };
 
 // Lấy chi tiết đơn hàng
-exports.getOrderDetails = async (orderId, userID) => {
+exports.getOrderDetails = async (orderId) => {
   // Lấy thông tin đơn hàng
   const [orders] = await db.query(
     `SELECT o.*, CONCAT(u.lastname, ' ', u.firstname) as customerName, u.email as customerEmail, u.phone as customerPhone
      FROM tblorder o
      LEFT JOIN tbluser u ON o.userID = u.userID
-     WHERE o.orderID = ? AND o.userID = ?`,
-    [orderId, userID]
+     WHERE o.orderID = ?`,
+    [orderId]
   );
 
   if (orders.length === 0) {
@@ -159,7 +159,7 @@ exports.getOrderDetails = async (orderId, userID) => {
 };
 
 // Cập nhật trạng thái đơn hàng
-exports.updateOrderStatus = async (orderId, status, userID) => {
+exports.updateOrderStatus = async (orderId, status) => {
   // Kiểm tra trạng thái hợp lệ
   const validStatuses = ['pending', 'processing', 'shipping', 'completed', 'cancelled'];
   if (!validStatuses.includes(status)) {
@@ -172,8 +172,8 @@ exports.updateOrderStatus = async (orderId, status, userID) => {
 
     // Kiểm tra đơn hàng
     const [orders] = await conn.query(
-      'SELECT * FROM tblorder WHERE orderID = ? AND userID = ?',
-      [orderId, userID]
+      'SELECT * FROM tblorder WHERE orderID = ?',
+      [orderId]
     );
 
     if (orders.length === 0) {

@@ -88,11 +88,16 @@ const routes = [
     path: '/promotions',
     name: 'promotions',
     component: () => import('@/views/PromotionListView.vue')
+  },
+  {
+    path: '/order-success',
+    name: 'order-success',
+    component: () => import('@/views/OrderSuccessView.vue')
   }
 ]
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHistory(import.meta.env.BASE_URL),
   routes
 })
 

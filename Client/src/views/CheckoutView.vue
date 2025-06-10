@@ -127,11 +127,11 @@
               <div class="card-body">
                 <div class="order-items">
                   <div v-for="item in orderItems" :key="item.productId" class="order-item mb-3">
-                    <div class="d-flex">
-                      <img :src="item.image" class="order-item-image rounded" :alt="item.name">
-                      <div class="ms-3">
-                        <h6 class="mb-1">{{ item.name }}</h6>
-                        <div class="d-flex justify-content-between">
+                    <div class="d-flex align-items-center">
+                      <img :src="`TTCS/server/uploads/${item.image}`" class="order-item-image rounded flex-shrink-0" :alt="item.name">
+                      <div class="ms-3 flex-grow-1">
+                        <div class="fw-semibold">{{ item.name }}</div>
+                        <div class="d-flex justify-content-between align-items-center">
                           <small class="text-muted">
                             <span v-if="item.discount">
                               {{ formatPrice(item.price * (1 - item.discount.value / 100)) }} x {{ item.quantity }}
@@ -140,7 +140,7 @@
                               {{ formatPrice(item.price) }} x {{ item.quantity }}
                             </span>
                           </small>
-                          <span class="fw-bold">
+                          <span class="fw-bold ms-2">
                             <span v-if="item.discount">
                               {{ formatPrice((item.price * (1 - item.discount.value / 100)) * item.quantity) }}
                             </span>
@@ -204,6 +204,7 @@
             </div>
             <div class="modal-footer">
               <button type="button" class="btn btn-secondary" @click="showVietQr = false">Đóng</button>
+              <button type="button" class="btn btn-success" @click="goToSuccess">Hoàn thành</button>
             </div>
           </div>
         </div>
@@ -270,7 +271,8 @@ export default {
 
         if (this.paymentMethod === 'cod') {
           alert('Đặt hàng thành công! Cảm ơn bạn đã mua sắm tại TPComputer.');
-          this.$router.push('/');
+          window.dispatchEvent(new CustomEvent('cart-updated', { detail: 0 }));
+          this.$router.push('/order-success');
         } else if (this.paymentMethod === 'vietqr' && res.data.qrUrl) {
           // Hiển thị mã QR cho khách hàng quét
           this.vietQrUrl = res.data.qrUrl;
@@ -281,6 +283,11 @@ export default {
         console.error('Lỗi đặt hàng:', e);
         alert(e.response?.data?.message || 'Có lỗi khi đặt hàng!');
       }
+    },
+    goToSuccess() {
+      this.showVietQr = false;
+      window.dispatchEvent(new CustomEvent('cart-updated', { detail: 0 }));
+      this.$router.push('/order-success');
     }
   },
   async mounted() {
@@ -410,9 +417,10 @@ export default {
 }
 
 .order-item-image {
-  width: 60px;
-  height: 60px;
+  width: 48px;
+  height: 48px;
   object-fit: cover;
+  border-radius: 6px;
 }
 
 .form-label {

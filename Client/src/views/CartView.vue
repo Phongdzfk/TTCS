@@ -171,8 +171,15 @@ export default {
       return this.cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
     },
     discount() {
-      // Giả lập giảm giá 10%
-      return this.subtotal * 0.1;
+      return this.cartItems.reduce((total, item) => {
+        if (item.discount) {
+          const discountValue = typeof item.discount.value === 'string'
+            ? parseFloat(item.discount.value)
+            : item.discount.value;
+          return total + (item.price * item.quantity * discountValue / 100);
+        }
+        return total;
+      }, 0);
     },
     total() {
       return this.subtotal - this.discount;
