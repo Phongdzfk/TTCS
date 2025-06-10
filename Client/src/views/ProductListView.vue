@@ -18,13 +18,28 @@
     <div class="container-fluid py-5">
       <div class="container">
         <!-- Nút mở modal filter nâng cao -->
-        <button
-          v-if="filterAttributes.length > 0"
-          class="btn btn-outline-secondary mb-3"
-          @click="showFilter = true"
-        >
-          <i class="bi bi-funnel"></i> Lọc nâng cao
-        </button>
+        <div class="d-flex gap-2 mb-3">
+          <button
+            v-if="filterAttributes.length > 0"
+            class="btn btn-outline-secondary"
+            @click="showFilter = true"
+          >
+            <i class="bi bi-funnel"></i> Lọc nâng cao
+          </button>
+          <div class="dropdown">
+            <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <i class="bi bi-currency-dollar"></i> Lọc theo giá
+            </button>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item" href="#" @click.prevent="filterByPrice(null)">Tất cả giá</a></li>
+              <li><a class="dropdown-item" href="#" @click.prevent="filterByPrice(5000000)">Dưới 5 triệu</a></li>
+              <li><a class="dropdown-item" href="#" @click.prevent="filterByPrice(10000000)">Dưới 10 triệu</a></li>
+              <li><a class="dropdown-item" href="#" @click.prevent="filterByPrice(15000000)">Dưới 15 triệu</a></li>
+              <li><a class="dropdown-item" href="#" @click.prevent="filterByPrice(20000000)">Dưới 20 triệu</a></li>
+              <li><a class="dropdown-item" href="#" @click.prevent="filterByPrice(20000000, true)">20 triệu trở lên</a></li>
+            </ul>
+          </div>
+        </div>
         
         <!-- Filter Bar -->
         <div class="filter-bar mb-4">
@@ -153,6 +168,8 @@ export default {
       selectedFilter: {},
       currentPage: 1,
       pageSize: 8,
+      maxPrice: null, // Thêm biến để lưu giá tối đa
+      minPrice: null, // Thêm biến để lưu giá tối thiểu
     }
   },
   mounted() {
@@ -211,6 +228,8 @@ export default {
       const params = {
         categoryID: this.selectedCategory,
         search: this.searchKeyword,
+        maxPrice: this.maxPrice, // Thêm maxPrice vào params
+        minPrice: this.minPrice, // Thêm minPrice vào params
         ...this.selectedFilter // Gửi filter động lên backend
       };
       this.loadingProducts = true;
@@ -266,6 +285,8 @@ export default {
       this.selectedCategory = '';
       this.sortOption = 'default';
       this.searchKeyword = '';
+      this.maxPrice = null; // Reset maxPrice
+      this.minPrice = null; // Reset minPrice
     },
     selectFilter(attName, value) {
       // Sửa lại cho Vue 3: Không dùng this.$set, chỉ cần gán trực tiếp
@@ -294,7 +315,17 @@ export default {
     },
     nextPage() {
       if (this.currentPage < this.totalPages) this.currentPage++;
-    }
+    },
+    filterByPrice(price, isMinPrice = false) {
+      if (isMinPrice) {
+        this.minPrice = price;
+        this.maxPrice = null;
+      } else {
+        this.maxPrice = price;
+        this.minPrice = null;
+      }
+      this.fetchProductsWithFilter();
+    },
   },
   computed: {
     filteredProducts() {

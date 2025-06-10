@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 exports.getAllProducts = async (query) => {
-  const { search, categoryID, hasDiscount, sort, limit, ...dynamicFilters } = query;
+  const { search, categoryID, hasDiscount, sort, limit, maxPrice, minPrice, ...dynamicFilters } = query;
   let sql = 'SELECT p.productID, p.name, p.price, p.stockQuantity, p.description, p.categoryID, p.status, p.isFeatured, p.createdAt FROM tblProduct p WHERE 1=1';
   const params = [];
   if (categoryID) {
@@ -17,6 +17,34 @@ exports.getAllProducts = async (query) => {
   // Lọc sản phẩm có discount nếu có hasDiscount
   if (hasDiscount === 'true' || hasDiscount === true) {
     sql += ' AND EXISTS (SELECT 1 FROM tblProductDiscount pd JOIN tblDiscount d ON pd.discountID = d.discountID WHERE pd.productID = p.productID AND d.endDate >= CURDATE())';
+  }
+  // Lọc theo giá tối đa hoặc tối thiểu
+  const priceCondition = `
+    CASE 
+      WHEN EXISTS (
+        SELECT 1 FROM tblProductDiscount pd 
+        JOIN tblDiscount d ON pd.discountID = d.discountID 
+        WHERE pd.productID = p.productID 
+        AND d.endDate >= CURDATE()
+      ) THEN p.price * (1 - (
+        SELECT d.value/100 
+        FROM tblProductDiscount pd 
+        JOIN tblDiscount d ON pd.discountID = d.discountID 
+        WHERE pd.productID = p.productID 
+        AND d.endDate >= CURDATE() 
+        ORDER BY d.endDate DESC 
+        LIMIT 1
+      ))
+      ELSE p.price 
+    END
+  `;
+  if (maxPrice) {
+    sql += ` AND (${priceCondition}) <= ?`;
+    params.push(Number(maxPrice));
+  }
+  if (minPrice) {
+    sql += ` AND (${priceCondition}) >= ?`;
+    params.push(Number(minPrice));
   }
   // Xử lý filter động (CPU, RAM, ...)
   const filterKeys = Object.keys(dynamicFilters);
