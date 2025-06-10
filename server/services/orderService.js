@@ -17,7 +17,7 @@ async function createOrderInDb(orderData, userID) {
   try {
     await conn.beginTransaction();
     // 1. Tạo đơn hàng
-    const status = customStatus || (paymentMethod === 'cod' ? 'pending' : 'waiting_payment');
+    const status = customStatus || (paymentMethod === 'cod' ? 'pending' : 'pending');
     const [orderResult] = await conn.query(
       'INSERT INTO tblorder (userID, orderDate, totalAmount, status, paymentMethod, shippingAddress) VALUES (?, NOW(), ?, ?, ?, ?)',
       [
@@ -79,15 +79,242 @@ exports.createOrder = async (orderData, userID) => {
   throw new Error('Phương thức thanh toán không hợp lệ!');
 };
 
-exports.handleMomoCallback = async (data) => {
-  // Xác nhận thanh toán thành công từ MoMo
-  if (data.resultCode === 0) {
-    // Thành công, cập nhật trạng thái đơn hàng
-    await db.query('UPDATE tblorder SET status=? WHERE orderID=?', ['paid', data.orderId]);
-  } else {
-    // Thất bại hoặc bị hủy
-    await db.query('UPDATE tblorder SET status=? WHERE orderID=?', ['cancelled', data.orderId]);
+exports.createOrderInDb = createOrderInDb;
+
+// Lấy danh sách đơn hàng
+exports.getOrders = async ({ userID, page, limit, status, search, dateFrom, dateTo }) => {
+  const offset = (page - 1) * limit;
+  let query = `
+    SELECT o.*, CONCAT(u.lastname, ' ', u.firstname) as customerName, u.email as customerEmail, u.phone as customerPhone
+    FROM tblorder o
+    LEFT JOIN tbluser u ON o.userID = u.userID
+    WHERE o.userID = ?
+  `;
+  const params = [userID];
+
+  if (status) {
+    query += ' AND o.status = ?';
+    params.push(status);
+  }
+
+  if (search) {
+    query += ' AND (o.orderID LIKE ? OR CONCAT(u.lastname, \' \' , u.firstname) LIKE ?)';
+    params.push(`%${search}%`, `%${search}%`);
+  }
+
+  if (dateFrom && dateTo) {
+    query += ' AND o.orderDate BETWEEN ? AND ?';
+    params.push(dateFrom, dateTo);
+  }
+
+  // Đếm tổng số records
+  const [countResult] = await db.query(
+    `SELECT COUNT(*) as total FROM (${query}) as t`,
+    params
+  );
+  const total = countResult[0].total;
+
+  // Lấy dữ liệu với phân trang
+  query += ' ORDER BY o.orderDate DESC LIMIT ? OFFSET ?';
+  params.push(limit, offset);
+
+  const [orders] = await db.query(query, params);
+
+  return {
+    orders,
+    total,
+    page,
+    totalPages: Math.ceil(total / limit)
+  };
+};
+
+// Lấy chi tiết đơn hàng
+exports.getOrderDetails = async (orderId, userID) => {
+  // Lấy thông tin đơn hàng
+  const [orders] = await db.query(
+    `SELECT o.*, CONCAT(u.lastname, ' ', u.firstname) as customerName, u.email as customerEmail, u.phone as customerPhone
+     FROM tblorder o
+     LEFT JOIN tbluser u ON o.userID = u.userID
+     WHERE o.orderID = ? AND o.userID = ?`,
+    [orderId, userID]
+  );
+
+  if (orders.length === 0) {
+    return null;
+  }
+
+  const order = orders[0];
+
+  // Lấy chi tiết sản phẩm trong đơn hàng
+  const [items] = await db.query(
+    `SELECT od.*, p.name as productName, (SELECT imageUrl FROM tblproductimage WHERE productID = p.productID LIMIT 1) as imageUrl
+     FROM tblorderdetail od
+     LEFT JOIN tblproduct p ON od.productID = p.productID
+     WHERE od.orderID = ?`,
+    [orderId]
+  );
+
+  order.items = items;
+  return order;
+};
+
+// Cập nhật trạng thái đơn hàng
+exports.updateOrderStatus = async (orderId, status, userID) => {
+  // Kiểm tra trạng thái hợp lệ
+  const validStatuses = ['pending', 'processing', 'shipping', 'completed', 'cancelled'];
+  if (!validStatuses.includes(status)) {
+    throw new Error('Trạng thái không hợp lệ');
+  }
+
+  const conn = await db.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    // Kiểm tra đơn hàng
+    const [orders] = await conn.query(
+      'SELECT * FROM tblorder WHERE orderID = ? AND userID = ?',
+      [orderId, userID]
+    );
+
+    if (orders.length === 0) {
+      throw new Error('Không tìm thấy đơn hàng');
+    }
+
+    // Cập nhật trạng thái
+    await conn.query(
+      'UPDATE tblorder SET status = ? WHERE orderID = ?',
+      [status, orderId]
+    );
+
+    await conn.commit();
+
+    // Lấy thông tin đơn hàng sau khi cập nhật
+    const [updatedOrders] = await db.query(
+      'SELECT * FROM tblorder WHERE orderID = ?',
+      [orderId]
+    );
+
+    return updatedOrders[0];
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
   }
 };
 
-exports.createOrderInDb = createOrderInDb; 
+// Hủy đơn hàng
+exports.cancelOrder = async (orderId, userID) => {
+  const conn = await db.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    // Kiểm tra đơn hàng
+    const [orders] = await conn.query(
+      'SELECT * FROM tblorder WHERE orderID = ? AND userID = ?',
+      [orderId, userID]
+    );
+
+    if (orders.length === 0) {
+      throw new Error('Không tìm thấy đơn hàng');
+    }
+
+    const order = orders[0];
+
+    // Kiểm tra xem có thể hủy không
+    if (['completed', 'cancelled'].includes(order.status)) {
+      throw new Error('Không thể hủy đơn hàng này');
+    }
+
+    // Cập nhật trạng thái
+    await conn.query(
+      'UPDATE tblorder SET status = ? WHERE orderID = ?',
+      ['cancelled', orderId]
+    );
+
+    await conn.commit();
+
+    // Lấy thông tin đơn hàng sau khi cập nhật
+    const [updatedOrders] = await conn.query(
+      'SELECT * FROM tblorder WHERE orderID = ?',
+      [orderId]
+    );
+
+    return updatedOrders[0];
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+};
+
+// Lấy tất cả đơn hàng cho admin
+exports.getAllOrders = async ({ page, limit, status, search, dateFrom, dateTo }) => {
+  console.log('getAllOrders params:', { page, limit, status, search, dateFrom, dateTo });
+  try {
+    const offset = (page - 1) * limit;
+    let query = `
+      SELECT o.*, CONCAT(u.lastname, ' ', u.firstname) as customerName, u.email as customerEmail, u.phone as customerPhone
+      FROM tblorder o
+      LEFT JOIN tbluser u ON o.userID = u.userID
+      WHERE 1=1
+    `;
+    const params = [];
+
+    if (status) {
+      query += ' AND o.status = ?';
+      params.push(status);
+    }
+    if (search) {
+      query += ' AND (o.orderID LIKE ? OR CONCAT(u.lastname, \' \' , u.firstname) LIKE ?)';
+      params.push(`%${search}%`, `%${search}%`);
+    }
+
+    if (dateFrom && dateTo) {
+      query += ' AND o.orderDate BETWEEN ? AND ?';
+      params.push(dateFrom, dateTo);
+    }
+
+    // Đếm tổng số records
+    const [countResult] = await db.query(
+      `SELECT COUNT(*) as total FROM (${query}) as t`,
+      params
+    );
+    const total = countResult[0].total;
+
+    // Lấy dữ liệu với phân trang
+    query += ' ORDER BY o.orderDate DESC LIMIT ? OFFSET ?';
+    params.push(limit, offset);
+
+    const [orders] = await db.query(query, params);
+
+    return {
+      orders,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit)
+    };
+  } catch (err) {
+    throw err;
+  }
+};
+
+// Xóa đơn hàng
+exports.deleteOrder = async (orderId) => {
+  const conn = await db.getConnection();
+  try {
+    await conn.beginTransaction();
+    // Xóa chi tiết đơn hàng trước
+    await conn.query('DELETE FROM tblorderdetail WHERE orderID = ?', [orderId]);
+    // Xóa đơn hàng
+    await conn.query('DELETE FROM tblorder WHERE orderID = ?', [orderId]);
+    await conn.commit();
+    return { success: true };
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+};

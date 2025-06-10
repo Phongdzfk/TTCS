@@ -1,6 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '@/views/HomeView.vue'
-import VnpayReturnView from '@/views/VnpayReturnView.vue';
 
 const routes = [
   {
@@ -89,11 +88,6 @@ const routes = [
     path: '/promotions',
     name: 'promotions',
     component: () => import('@/views/PromotionListView.vue')
-  },
-  {
-    path: '/vnpay-return',
-    name: 'VnpayReturn',
-    component: VnpayReturnView
   }
 ]
 

@@ -80,10 +80,10 @@
                             </tr>
                           </thead>
                           <tbody>
-                            <tr v-for="order in activeOrders" :key="order.id">
-                              <td>#{{ order.id }}</td>
+                            <tr v-for="order in activeOrders" :key="order.orderID">
+                              <td>#{{ order.orderID }}</td>
                               <td>{{ formatDate(order.orderDate) }}</td>
-                              <td>{{ formatPrice(order.total) }}</td>
+                              <td>{{ formatPrice(order.totalAmount) }}</td>
                               <td>
                                 <span :class="getStatusClass(order.status)">
                                   {{ getStatusText(order.status) }}
@@ -93,7 +93,7 @@
                                 <button class="btn btn-sm btn-outline-primary me-2" @click="viewOrderDetails(order)">
                                   <i class="bi bi-eye"></i> Chi tiết
                                 </button>
-                                <button v-if="order.status === 'pending'" class="btn btn-sm btn-outline-danger" @click="cancelOrder(order)">
+                                <button v-if="canCancel(order)" class="btn btn-sm btn-outline-danger" @click="cancelOrder(order)">
                                   <i class="bi bi-x-circle"></i> Hủy
                                 </button>
                               </td>
@@ -152,10 +152,10 @@
                             </tr>
                           </thead>
                           <tbody>
-                            <tr v-for="order in filteredHistoryOrders" :key="order.id">
-                              <td>#{{ order.id }}</td>
+                            <tr v-for="order in paginatedHistoryOrders" :key="order.orderID">
+                              <td>#{{ order.orderID }}</td>
                               <td>{{ formatDate(order.orderDate) }}</td>
-                              <td>{{ formatPrice(order.total) }}</td>
+                              <td>{{ formatPrice(order.totalAmount) }}</td>
                               <td>
                                 <span :class="getStatusClass(order.status)">
                                   {{ getStatusText(order.status) }}
@@ -212,95 +212,59 @@
       <div class="modal-dialog modal-lg">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title">Chi tiết đơn hàng #{{ selectedOrder.id }}</h5>
+            <h5 class="modal-title">Chi tiết đơn hàng #{{ selectedOrder.orderID }}</h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body">
             <div class="row mb-4">
               <div class="col-md-6">
-                <h6>Thông tin đơn hàng</h6>
-                <p class="mb-1">Mã đơn hàng: #{{ selectedOrder.id }}</p>
-                <p class="mb-1">Ngày đặt: {{ formatDate(selectedOrder.orderDate) }}</p>
-                <p class="mb-1">Trạng thái: 
+                <h6 class="mb-2">Thông tin đơn hàng</h6>
+                <p class="mb-1"><strong>Mã đơn hàng:</strong> {{ selectedOrder.orderID }}</p>
+                <p class="mb-1"><strong>Ngày đặt:</strong> {{ formatDate(selectedOrder.orderDate) }}</p>
+                <p class="mb-1"><strong>Trạng thái:</strong> 
                   <span :class="getStatusClass(selectedOrder.status)">
                     {{ getStatusText(selectedOrder.status) }}
                   </span>
                 </p>
-                <p class="mb-1">Phương thức thanh toán: {{ selectedOrder.paymentMethod }}</p>
+                <p class="mb-1"><strong>Phương thức thanh toán:</strong> {{ selectedOrder.paymentMethod }}</p>
+                <p class="mb-1"><strong>Địa chỉ giao hàng:</strong> {{ selectedOrder.shippingAddress }}</p>
               </div>
               <div class="col-md-6">
-                <h6>Thông tin giao hàng</h6>
-                <p class="mb-1">Người nhận: {{ selectedOrder.shippingAddress?.name }}</p>
-                <p class="mb-1">Số điện thoại: {{ selectedOrder.shippingAddress?.phone }}</p>
-                <p class="mb-1">Địa chỉ: {{ selectedOrder.shippingAddress?.address }}</p>
+                <h6 class="mb-2">Thông tin khách hàng</h6>
+                <p class="mb-1"><strong>Họ tên:</strong> {{ selectedOrder.customerName }}</p>
+                <p class="mb-1"><strong>Email:</strong> {{ selectedOrder.customerEmail }}</p>
+                <p class="mb-1"><strong>Số điện thoại:</strong> {{ selectedOrder.customerPhone }}</p>
               </div>
             </div>
-            
-            <h6>Sản phẩm</h6>
+            <h6 class="mb-3">Sản phẩm</h6>
             <div class="table-responsive">
-              <table class="table">
-                <thead>
+              <table class="table table-bordered">
+                <thead class="table-light">
                   <tr>
                     <th>Sản phẩm</th>
-                    <th class="text-center">Đơn giá</th>
-                    <th class="text-center">Số lượng</th>
-                    <th class="text-end">Thành tiền</th>
+                    <th>Ảnh</th>
+                    <th>Đơn giá</th>
+                    <th>Số lượng</th>
+                    <th>Thành tiền</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="item in selectedOrder.items" :key="item.id">
-                    <td>
-                      <div class="d-flex align-items-center">
-                        <img :src="item.image" alt="Product" class="order-item-image me-3">
-                        <div>
-                          <h6 class="mb-0">{{ item.name }}</h6>
-                        </div>
-                      </div>
-                    </td>
-                    <td class="text-center">{{ formatPrice(item.price) }}</td>
-                    <td class="text-center">{{ item.quantity }}</td>
-                    <td class="text-end">{{ formatPrice(item.price * item.quantity) }}</td>
+                  <tr v-for="(item, index) in selectedOrder.items" :key="index">
+                    <td>{{ item.productName }}</td>
+                    <td><img :src="item.imageUrl" alt="Ảnh" style="width:50px;height:50px;object-fit:cover;"></td>
+                    <td>{{ formatPrice(item.price) }}</td>
+                    <td>{{ item.quantity }}</td>
+                    <td>{{ formatPrice(item.price * item.quantity) }}</td>
                   </tr>
                 </tbody>
-                <tfoot>
-                  <tr>
-                    <td colspan="3" class="text-end">Tạm tính:</td>
-                    <td class="text-end">{{ formatPrice(selectedOrder.subtotal) }}</td>
-                  </tr>
-                  <tr>
-                    <td colspan="3" class="text-end">Phí vận chuyển:</td>
-                    <td class="text-end">{{ formatPrice(selectedOrder.shippingFee) }}</td>
-                  </tr>
-                  <tr>
-                    <td colspan="3" class="text-end">Giảm giá:</td>
-                    <td class="text-end">-{{ formatPrice(selectedOrder.discount) }}</td>
-                  </tr>
-                  <tr>
-                    <td colspan="3" class="text-end fw-bold">Tổng cộng:</td>
-                    <td class="text-end fw-bold">{{ formatPrice(selectedOrder.total) }}</td>
-                  </tr>
-                </tfoot>
               </table>
+            </div>
+            <div class="mt-3 text-end">
+              <strong>Tổng cộng: {{ formatPrice(selectedOrder.totalAmount) }}</strong>
             </div>
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
-            <button 
-              v-if="selectedOrder.status === 'pending'" 
-              type="button" 
-              class="btn btn-danger" 
-              @click="cancelOrderFromModal"
-            >
-              Hủy đơn hàng
-            </button>
-            <button 
-              v-if="selectedOrder.status === 'completed'" 
-              type="button" 
-              class="btn btn-primary" 
-              @click="repurchaseFromModal"
-            >
-              Mua lại
-            </button>
           </div>
         </div>
       </div>
@@ -309,149 +273,44 @@
 </template>
 
 <script>
+import axios from 'axios';
+
+function getAuthHeaders() {
+  const token = localStorage.getItem('token');
+  return token ? { Authorization: 'Bearer ' + token } : {};
+}
+
 export default {
   data() {
     return {
-      activeOrders: [
-        {
-          id: 'ORD001',
-          orderDate: '2025-04-25T10:30:00',
-          total: 22990000,
-          status: 'pending',
-          paymentMethod: 'COD',
-          shippingFee: 30000,
-          discount: 0,
-          subtotal: 22960000,
-          shippingAddress: {
-            name: 'Nguyễn Văn A',
-            phone: '0987654321',
-            address: '123 Đường ABC, Quận 1, TP. Hồ Chí Minh'
-          },
-          items: [
-            {
-              id: 1,
-              name: 'Laptop Gaming Acer Nitro 5',
-              price: 22990000,
-              quantity: 1,
-              image: '@/assets/images/home/banner.jpg'
-            }
-          ]
-        },
-        {
-          id: 'ORD002',
-          orderDate: '2025-04-26T09:15:00',
-          total: 17980000,
-          status: 'processing',
-          paymentMethod: 'Chuyển khoản ngân hàng',
-          shippingFee: 0,
-          discount: 0,
-          subtotal: 17980000,
-          shippingAddress: {
-            name: 'Nguyễn Văn A',
-            phone: '0987654321',
-            address: '123 Đường ABC, Quận 1, TP. Hồ Chí Minh'
-          },
-          items: [
-            {
-              id: 3,
-              name: 'Màn hình Gaming 27" LG UltraGear',
-              price: 8990000,
-              quantity: 2,
-              image: '@/assets/images/home/banner.jpg'
-            }
-          ]
-        }
-      ],
-      historyOrders: [
-        {
-          id: 'ORD003',
-          orderDate: '2025-03-15T14:20:00',
-          total: 30000000,
-          status: 'completed',
-          paymentMethod: 'Thẻ tín dụng',
-          shippingFee: 0,
-          discount: 0,
-          subtotal: 30000000,
-          shippingAddress: {
-            name: 'Nguyễn Văn A',
-            phone: '0987654321',
-            address: '123 Đường ABC, Quận 1, TP. Hồ Chí Minh'
-          },
-          items: [
-            {
-              id: 1,
-              name: 'Laptop Dell XPS 13',
-              price: 30000000,
-              quantity: 1,
-              image: '@/assets/images/home/banner.jpg'
-            }
-          ]
-        },
-        {
-          id: 'ORD004',
-          orderDate: '2025-02-20T11:45:00',
-          total: 35000000,
-          status: 'cancelled',
-          paymentMethod: 'COD',
-          shippingFee: 30000,
-          discount: 0,
-          subtotal: 34970000,
-          shippingAddress: {
-            name: 'Nguyễn Văn A',
-            phone: '0987654321',
-            address: '123 Đường ABC, Quận 1, TP. Hồ Chí Minh'
-          },
-          items: [
-            {
-              id: 4,
-              name: 'PC Gaming Asus ROG',
-              price: 35000000,
-              quantity: 1,
-              image: '@/assets/images/home/banner.jpg'
-            }
-          ]
-        },
-        {
-          id: 'ORD005',
-          orderDate: '2025-01-10T16:30:00',
-          total: 5700000,
-          status: 'completed',
-          paymentMethod: 'Ví điện tử',
-          shippingFee: 30000,
-          discount: 0,
-          subtotal: 5670000,
-          shippingAddress: {
-            name: 'Nguyễn Văn A',
-            phone: '0987654321',
-            address: '123 Đường ABC, Quận 1, TP. Hồ Chí Minh'
-          },
-          items: [
-            {
-              id: 5,
-              name: 'Tai nghe Gaming Logitech',
-              price: 2500000,
-              quantity: 1,
-              image: '@/assets/images/home/banner.jpg'
-            },
-            {
-              id: 6,
-              name: 'Bàn phím cơ Corsair K95',
-              price: 3200000,
-              quantity: 1,
-              image: '@/assets/images/home/banner.jpg'
-            }
-          ]
-        }
-      ],
-      selectedOrder: {},
+      orders: [],
       searchQuery: '',
       statusFilter: '',
       currentPage: 1,
-      itemsPerPage: 5,
-      filteredHistoryOrders: []
-    }
+      itemsPerPage: 10,
+      selectedOrder: {},
+      loading: false,
+      error: null
+    };
   },
   computed: {
+    activeOrders() {
+      return this.orders.filter(o => o.status !== 'completed' && o.status !== 'cancelled');
+    },
+    historyOrders() {
+      return this.orders.filter(o => o.status === 'completed' || o.status === 'cancelled');
+    },
+    filteredHistoryOrders() {
+      let result = this.historyOrders;
+      if (this.searchQuery) {
+        const q = this.searchQuery.toLowerCase();
+        result = result.filter(o => String(o.orderID).includes(q));
+      }
+      if (this.statusFilter) {
+        result = result.filter(o => o.status === this.statusFilter);
+      }
+      return result;
+    },
     totalPages() {
       return Math.ceil(this.filteredHistoryOrders.length / this.itemsPerPage);
     },
@@ -462,135 +321,79 @@ export default {
     }
   },
   methods: {
-    formatDate(dateString) {
-      const options = { 
-        year: 'numeric', 
-        month: '2-digit', 
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit'
-      };
-      return new Date(dateString).toLocaleDateString('vi-VN', options);
+    async fetchOrders() {
+      try {
+        this.loading = true;
+        const res = await axios.get('/api/orders', { headers: getAuthHeaders() });
+        this.orders = res.data.orders || [];
+      } catch (err) {
+        this.error = 'Không thể tải danh sách đơn hàng';
+        this.orders = [];
+      } finally {
+        this.loading = false;
+      }
+    },
+    formatDate(date) {
+      return new Date(date).toLocaleDateString('vi-VN');
     },
     formatPrice(price) {
       return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
     },
     getStatusText(status) {
       const statusMap = {
-        'pending': 'Chờ xác nhận',
-        'processing': 'Đang xử lý',
-        'shipping': 'Đang giao hàng',
-        'completed': 'Đã giao hàng',
-        'cancelled': 'Đã hủy'
+        waiting_payment: 'Chờ xác nhận',
+        pending: 'Chờ xác nhận',
+        processing: 'Đang xử lý',
+        shipping: 'Đang giao hàng',
+        completed: 'Đã hoàn thành',
+        cancelled: 'Đã hủy'
       };
       return statusMap[status] || status;
     },
     getStatusClass(status) {
       const classMap = {
-        'pending': 'badge bg-warning text-dark',
-        'processing': 'badge bg-info text-dark',
-        'shipping': 'badge bg-primary',
-        'completed': 'badge bg-success',
-        'cancelled': 'badge bg-danger'
+        waiting_payment: 'badge bg-warning',
+        pending: 'badge bg-warning',
+        processing: 'badge bg-info',
+        shipping: 'badge bg-primary',
+        completed: 'badge bg-success',
+        cancelled: 'badge bg-danger'
       };
       return classMap[status] || 'badge bg-secondary';
     },
     viewOrderDetails(order) {
-      this.selectedOrder = { ...order };
+      this.selectedOrder = order;
       const modal = new bootstrap.Modal(document.getElementById('orderDetailsModal'));
       modal.show();
     },
-    cancelOrder(order) {
-      if (confirm(`Bạn có chắc chắn muốn hủy đơn hàng #${order.id}?`)) {
-        // Giả lập API call
-        setTimeout(() => {
-          // Cập nhật trạng thái đơn hàng
-          order.status = 'cancelled';
-          
-          // Xóa khỏi danh sách đơn hàng đang xử lý
-          this.activeOrders = this.activeOrders.filter(o => o.id !== order.id);
-          
-          // Thêm vào lịch sử đơn hàng
-          this.historyOrders.unshift({ ...order });
-          
-          // Cập nhật danh sách lọc
-          this.filterOrders();
-          
-          // Hiển thị thông báo
-          alert('Đã hủy đơn hàng thành công!');
-        }, 500);
-      }
+    canCancel(order) {
+      return ['pending', 'waiting_payment', 'processing'].includes(order.status);
     },
-    cancelOrderFromModal() {
-      if (confirm(`Bạn có chắc chắn muốn hủy đơn hàng #${this.selectedOrder.id}?`)) {
-        // Giả lập API call
-        setTimeout(() => {
-          // Tìm đơn hàng trong danh sách đơn hàng đang xử lý
-          const orderIndex = this.activeOrders.findIndex(o => o.id === this.selectedOrder.id);
-          if (orderIndex !== -1) {
-            // Cập nhật trạng thái đơn hàng
-            this.activeOrders[orderIndex].status = 'cancelled';
-            
-            // Xóa khỏi danh sách đơn hàng đang xử lý
-            this.activeOrders.splice(orderIndex, 1);
-            
-            // Thêm vào lịch sử đơn hàng
-            this.historyOrders.unshift({ ...this.activeOrders[orderIndex] });
-            
-            // Cập nhật danh sách lọc
-            this.filterOrders();
-            
-            // Đóng modal
-            const modal = bootstrap.Modal.getInstance(document.getElementById('orderDetailsModal'));
-            modal.hide();
-            
-            // Hiển thị thông báo
-            alert('Đã hủy đơn hàng thành công!');
-          }
-        }, 500);
+    async cancelOrder(order) {
+      if (!this.canCancel(order)) return;
+      if (!confirm(`Bạn có chắc chắn muốn hủy đơn hàng #${order.orderID}?`)) return;
+      try {
+        await axios.put(`/api/orders/${order.orderID}/status`, { status: 'cancelled' }, { headers: getAuthHeaders() });
+        await this.fetchOrders();
+        alert('Đã hủy đơn hàng thành công!');
+      } catch (err) {
+        alert('Không thể hủy đơn hàng!');
+        console.error(err);
       }
     },
     repurchase(order) {
       // Giả lập thêm sản phẩm vào giỏ hàng
-      alert(`Đã thêm các sản phẩm từ đơn hàng #${order.id} vào giỏ hàng!`);
-      
-      // Chuyển hướng đến trang giỏ hàng
-      this.$router.push('/cart');
-    },
-    repurchaseFromModal() {
-      // Giả lập thêm sản phẩm vào giỏ hàng
-      alert(`Đã thêm các sản phẩm từ đơn hàng #${this.selectedOrder.id} vào giỏ hàng!`);
-      
-      // Đóng modal
-      const modal = bootstrap.Modal.getInstance(document.getElementById('orderDetailsModal'));
-      modal.hide();
+      alert(`Đã thêm các sản phẩm từ đơn hàng #${order.orderID} vào giỏ hàng!`);
       
       // Chuyển hướng đến trang giỏ hàng
       this.$router.push('/cart');
     },
     filterOrders() {
-      let filtered = [...this.historyOrders];
-      
-      // Lọc theo trạng thái
-      if (this.statusFilter) {
-        filtered = filtered.filter(order => order.status === this.statusFilter);
-      }
-      
-      // Lọc theo từ khóa tìm kiếm
-      if (this.searchQuery) {
-        const query = this.searchQuery.toLowerCase();
-        filtered = filtered.filter(order => 
-          order.id.toLowerCase().includes(query)
-        );
-      }
-      
-      this.filteredHistoryOrders = filtered;
-      this.currentPage = 1; // Reset về trang đầu tiên khi lọc
+      this.currentPage = 1;
     }
   },
-  created() {
-    // Khởi tạo danh sách lọc
-    this.filterOrders();
+  mounted() {
+    this.fetchOrders();
   }
 }
 </script>
