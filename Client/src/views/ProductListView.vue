@@ -307,9 +307,19 @@ export default {
       }
       switch (this.sortOption) {
         case 'price-asc':
-          result.sort((a, b) => a.price - b.price); break;
+          result.sort((a, b) => {
+            const priceA = a.discount ? a.price * (1 - a.discount.value / 100) : a.price;
+            const priceB = b.discount ? b.price * (1 - b.discount.value / 100) : b.price;
+            return priceA - priceB;
+          }); 
+          break;
         case 'price-desc':
-          result.sort((a, b) => b.price - a.price); break;
+          result.sort((a, b) => {
+            const priceA = a.discount ? a.price * (1 - a.discount.value / 100) : a.price;
+            const priceB = b.discount ? b.price * (1 - b.discount.value / 100) : b.price;
+            return priceB - priceA;
+          }); 
+          break;
         case 'name-asc':
           result.sort((a, b) => a.name.localeCompare(b.name)); break;
         case 'name-desc':
