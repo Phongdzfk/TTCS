@@ -34,4 +34,4 @@ exports.updateReview = async (reviewID, userID, rating, comment) => {
   if (rows[0].userID !== userID) throw new Error('Không có quyền sửa');
   await db.query('UPDATE tblreview SET rating = ?, comment = ? WHERE reviewID = ?', [rating, comment, reviewID]);
   return { reviewID, rating, comment };
-}; 
+};

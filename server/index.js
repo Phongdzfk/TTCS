@@ -4,7 +4,7 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const db = require('./config/db');
 const authRoutes = require('./routes/auth');
-const productRoutes = require('./routes/product');
+const productRouter = require('./routes/product');
 const categoryRoutes = require('./routes/category');
 const userRoutes = require('./routes/user');
 const discountRoutes = require('./routes/discount');
@@ -19,14 +19,20 @@ const PORT = process.env.PORT || 5000;
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
-app.use(cors());
+app.use(cors({
+  origin: '*', // hoặc thay bằng domain FE nếu muốn
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+}));
+app.options('*', cors());
 
 app.get('/', (req, res) => {
   res.send('TTCS Server is running!');
 });
 
 app.use('/api/auth', authRoutes);
-app.use('/api/products', productRoutes);
+app.use('/api/products', productRouter);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/discounts', discountRoutes);

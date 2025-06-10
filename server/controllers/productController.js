@@ -120,3 +120,25 @@ exports.assignDiscountToProduct = async (req, res) => {
     res.status(500).json({ message: 'Lỗi server', error: err.message });
   }
 };
+
+// Gợi ý sản phẩm theo lịch sử mua hàng của user
+exports.getRecommendedProducts = async (req, res) => {
+  try {
+    const userID = req.user.userID;
+    const products = await productService.getRecommendedProducts(userID);
+    res.json({ products: products || [] });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+exports.getRandomProducts = async (req, res) => {
+  try {
+    const limit = req.query.limit || 4;
+    const products = await productService.getAllProducts({ sort: 'random', limit });
+    res.json(products);
+  } catch (err) {
+    console.error('Error in getRandomProducts:', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};

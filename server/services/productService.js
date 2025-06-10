@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 exports.getAllProducts = async (query) => {
-  const { search, categoryID, hasDiscount, ...dynamicFilters } = query;
+  const { search, categoryID, hasDiscount, sort, limit, ...dynamicFilters } = query;
   let sql = 'SELECT p.productID, p.name, p.price, p.stockQuantity, p.description, p.categoryID, p.status, p.isFeatured, p.createdAt FROM tblProduct p WHERE 1=1';
   const params = [];
   if (categoryID) {
@@ -31,13 +31,31 @@ exports.getAllProducts = async (query) => {
       params.push(attName, dynamicFilters[attName]);
     });
   }
-  const [products] = await db.query(sql, params);
+  // Bổ sung sort random
+  let finalSql = sql;
+  if (sort === 'random') {
+    finalSql += ' ORDER BY RAND()';
+  } else if (sort === 'sold') {
+    finalSql = `SELECT p.*, SUM(od.quantity) as sold
+      FROM tblProduct p
+      LEFT JOIN tblorderdetail od ON p.productID = od.productID
+      GROUP BY p.productID
+      ORDER BY sold DESC`;
+  } else {
+    finalSql += ' ORDER BY p.createdAt DESC';
+  }
+  if (limit) {
+    finalSql += ' LIMIT ?';
+    params.push(Number(limit));
+  }
+  const [products] = await db.query(finalSql, params);
   // Lấy thuộc tính và ảnh cho từng sản phẩm
   for (const p of products) {
     const [atts] = await db.query('SELECT attName, attValue FROM tblProductAtt WHERE productID=?', [p.productID]);
     p.attributes = atts.map(att => ({ key: att.attName, value: att.attValue }));
     const [imgs] = await db.query('SELECT imageUrl FROM tblProductImage WHERE productID=?', [p.productID]);
     p.images = imgs.map(img => img.imageUrl);
+    p.image = imgs.length > 0 ? imgs[0].imageUrl : null;
     // Lấy discount hiện tại (nếu có)
     const [discountRows] = await db.query(`
       SELECT d.* FROM tblProductDiscount pd
@@ -223,7 +241,7 @@ exports.getFeaturedProducts = async () => {
 
 exports.getProductById = async (productID) => {
   const [products] = await db.query('SELECT productID, name, price, stockQuantity, description, categoryID, status, isFeatured, createdAt FROM tblProduct WHERE productID = ?', [productID]);
-  if (products.length === 0) throw new Error('Không tìm thấy sản phẩm!');
+  if (products.length === 0) return [];
   const product = products[0];
   const [atts] = await db.query('SELECT attName, attValue FROM tblProductAtt WHERE productID=?', [productID]);
   product.attributes = atts.map(att => ({ key: att.attName, value: att.attValue }));
@@ -289,4 +307,107 @@ exports.assignDiscountToProduct = async (productID, discountID) => {
   } finally {
     conn.release();
   }
+};
+
+// Gợi ý sản phẩm theo lịch sử mua hàng của user
+exports.getRecommendedProducts = async (userID) => {
+  // 1. Lấy tất cả productID, categoryID, brand (hãng) user đã mua
+  const [boughtRows] = await db.query(`
+    SELECT DISTINCT od.productID, p.categoryID, pa.attValue as brand
+    FROM tblorder o
+    JOIN tblorderdetail od ON o.orderID = od.orderID
+    JOIN tblproduct p ON od.productID = p.productID
+    LEFT JOIN tblproductatt pa ON p.productID = pa.productID AND pa.attName = 'Hãng'
+    WHERE o.userID = ? AND o.status = 'completed'
+  `, [userID]);
+
+  if (boughtRows.length === 0) {
+    const [randomProducts] = await db.query(
+      'SELECT p.productID, p.name, p.price, p.stockQuantity, p.description, p.categoryID FROM tblProduct p ORDER BY RAND() LIMIT 4'
+    );
+    for (const p of randomProducts) {
+      const [imgs] = await db.query('SELECT imageUrl FROM tblProductImage WHERE productID=? LIMIT 1', [p.productID]);
+      p.image = imgs.length > 0 ? imgs[0].imageUrl : null;
+    }
+    return randomProducts;
+  }
+
+  const boughtProductIDs = boughtRows.map(r => r.productID);
+  const boughtCategoryIDs = [...new Set(boughtRows.map(r => r.categoryID))];
+  const boughtBrands = [...new Set(boughtRows.map(r => r.brand).filter(Boolean))];
+
+  let suggested = [];
+  if (boughtCategoryIDs.length > 0) {
+    [suggested] = await db.query(
+      `SELECT p.productID, p.name, p.price, p.stockQuantity, p.description, p.categoryID
+       FROM tblProduct p
+       WHERE p.categoryID IN (${boughtCategoryIDs.map(() => '?').join(',')})
+         AND p.productID NOT IN (${boughtProductIDs.map(() => '?').join(',')})
+       ORDER BY RAND() LIMIT 4`,
+      [...boughtCategoryIDs, ...boughtProductIDs]
+    );
+  }
+  for (const p of suggested) {
+    const [imgs] = await db.query('SELECT imageUrl FROM tblProductImage WHERE productID=? LIMIT 1', [p.productID]);
+    p.image = imgs.length > 0 ? imgs[0].imageUrl : null;
+  }
+  if (suggested.length >= 4) {
+    return suggested.slice(0, 4);
+  }
+
+  let suggestedBrand = [];
+  if (boughtBrands.length > 0) {
+    [suggestedBrand] = await db.query(
+      `SELECT p.productID, p.name, p.price, p.stockQuantity, p.description, p.categoryID
+       FROM tblProduct p
+       LEFT JOIN tblproductatt pa ON p.productID = pa.productID AND pa.attName = 'Hãng'
+       WHERE pa.attValue IN (${boughtBrands.map(() => '?').join(',')})
+         AND p.productID NOT IN (${boughtProductIDs.concat(suggested.map(p => p.productID)).map(() => '?').join(',')})
+       ORDER BY RAND() LIMIT ?`,
+      [...boughtBrands, ...boughtProductIDs, ...suggested.map(p => p.productID), 4 - suggested.length]
+    );
+    for (const p of suggestedBrand) {
+      const [imgs] = await db.query('SELECT imageUrl FROM tblProductImage WHERE productID=? LIMIT 1', [p.productID]);
+      p.image = imgs.length > 0 ? imgs[0].imageUrl : null;
+    }
+  }
+  let allSuggested = suggested.concat(suggestedBrand);
+  if (allSuggested.length >= 4) {
+    return allSuggested.slice(0, 4);
+  }
+
+  const excludeIDs = boughtProductIDs.concat(allSuggested.map(p => p.productID));
+  let randomMore = [];
+  if (excludeIDs.length > 0) {
+    [randomMore] = await db.query(
+      `SELECT p.productID, p.name, p.price, p.stockQuantity, p.description, p.categoryID
+       FROM tblProduct p
+       WHERE p.productID NOT IN (${excludeIDs.map(() => '?').join(',')})
+       ORDER BY RAND() LIMIT ?`,
+      [...excludeIDs, 4 - allSuggested.length]
+    );
+  } else {
+    [randomMore] = await db.query(
+      `SELECT p.productID, p.name, p.price, p.stockQuantity, p.description, p.categoryID
+       FROM tblProduct p
+       ORDER BY RAND() LIMIT ?`,
+      [4 - allSuggested.length]
+    );
+  }
+  for (const p of randomMore) {
+    const [imgs] = await db.query('SELECT imageUrl FROM tblProductImage WHERE productID=? LIMIT 1', [p.productID]);
+    p.image = imgs.length > 0 ? imgs[0].imageUrl : null;
+  }
+  if ((allSuggested.concat(randomMore)).length === 0) {
+    const [randomProducts] = await db.query(
+      'SELECT p.productID, p.name, p.price, p.stockQuantity, p.description, p.categoryID FROM tblProduct p ORDER BY RAND() LIMIT 4'
+    );
+    for (const p of randomProducts) {
+      const [imgs] = await db.query('SELECT imageUrl FROM tblProductImage WHERE productID=? LIMIT 1', [p.productID]);
+      p.image = imgs.length > 0 ? imgs[0].imageUrl : null;
+    }
+    return randomProducts;
+  }
+  const result = allSuggested.concat(randomMore).slice(0, 4);
+  return result;
 };

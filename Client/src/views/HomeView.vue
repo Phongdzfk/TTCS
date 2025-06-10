@@ -136,28 +136,48 @@
         </div>
       </div>
 
-      <!-- Banner quảng cáo -->
-      <div class="container-fluid py-5 bg-light">
+      <!-- Banner gợi ý cho bạn -->
+      <div v-if="isLoggedIn" class="container-fluid py-5 bg-white">
         <div class="container">
+          <h2 class="section-title text-center mb-4">Gợi ý cho bạn</h2>
           <div class="row">
-            <div class="col-md-6 mb-4">
-              <div class="promo-banner">
-                <img src="@/assets/images/home/banner.jpg" class="img-fluid rounded" alt="Khuyến mãi">
-                <div class="promo-content">
-                  <h3>Laptop Gaming</h3>
-                  <p>Giảm đến 20% cho tất cả laptop gaming</p>
-                  <router-link to="/products?category=laptop" class="btn btn-light">Xem ngay</router-link>
+            <template v-if="(recommendedProducts.length > 0 ? recommendedProducts : fallbackProducts).length > 0">
+              <div v-for="product in (recommendedProducts.length > 0 ? recommendedProducts : fallbackProducts)" :key="product.productID" class="col-md-3 col-6 mb-4">
+                <div class="product-card h-100">
+                  <img :src="getImageUrl(product.image)" class="product-img-fit" :alt="product.name">
+                  <div class="card-body">
+                    <h5 class="card-title">{{ product.name }}</h5>
+                    <div class="price mb-2">
+                      <span class="text-danger fw-bold">{{ formatPrice(product.price) }}</span>
+                    </div>
+                    <div class="d-grid gap-2">
+                      <button class="btn btn-outline-primary" @click="addToCart(product)"><i class="bi bi-cart-plus"></i> Thêm vào giỏ</button>
+                      <router-link :to="{ path: '/products/' + product.productID, hash: '#top' }" class="btn btn-cart btn-detail-red" @click.native="scrollToTop">
+                        <i class="bi bi-eye"></i> Xem chi tiết
+                      </router-link>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-            <div class="col-md-6 mb-4">
-              <div class="promo-banner">
-                <img src="@/assets/images/home/banner.jpg" class="img-fluid rounded" alt="Khuyến mãi">
-                <div class="promo-content">
-                  <h3>Phụ kiện Gaming</h3>
-                  <p>Mua 2 tặng 1 cho tất cả phụ kiện</p>
-                  <router-link to="/products?category=accessory" class="btn btn-light">Xem ngay</router-link>
-                </div>
+            </template>
+            <template v-else>
+              <div class="col-12 text-center text-muted py-4">
+                Chưa có sản phẩm gợi ý, hãy khám phá thêm sản phẩm của chúng tôi!
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
+
+      <!-- Banner Đối tác -->
+      <div class="container-fluid py-5 bg-light">
+        <div class="container">
+          <h2 class="section-title text-center mb-4">Đối tác của TPComputer</h2>
+          <div class="row justify-content-center align-items-center">
+            <div class="col-6 col-md-3 mb-4 text-center" v-for="partner in partners" :key="partner.name">
+              <div class="partner-logo-wrapper p-3 bg-white rounded shadow-sm h-100 d-flex flex-column align-items-center justify-content-center partner-hover">
+                <img :src="partner.img" :alt="partner.name" class="img-fluid mb-2 partner-logo" style="max-height: 80px; object-fit: contain;">
+                <div class="fw-bold mt-2">{{ partner.name }}</div>
               </div>
             </div>
           </div>
@@ -185,6 +205,14 @@ export default {
       isLoggedIn: false,
       productDiscounts: [],
       loadingDiscount: true,
+      partners: [
+        { name: 'Asus', img: '/src/assets/images/home/asus.jpg' },
+        { name: 'Dell', img: '/src/assets/images/home/dell.png' },
+        { name: 'Logitech', img: '/src/assets/images/home/logi.png' },
+        { name: 'Lenovo', img: '/src/assets/images/home/leno.png' },
+      ],
+      recommendedProducts: [],
+      fallbackProducts: [],
     }
   },
   mounted() {
@@ -192,6 +220,7 @@ export default {
     this.fetchCategories();
     this.fetchProductDiscounts();
     this.fetchFeaturedProducts();
+    if (this.isLoggedIn) this.fetchRecommendedProducts();
     setTimeout(() => {
       console.log('Categories:', this.categories);
     }, 1500);
@@ -274,6 +303,29 @@ export default {
         this.featuredProducts = [];
       }
     },
+    async fetchRecommendedProducts() {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await axios.get('http://localhost:5000/api/products/recommended', {
+          headers: { Authorization: 'Bearer ' + token }
+        });
+        this.recommendedProducts = res.data.products || [];
+        if (this.recommendedProducts.length === 0) {
+          await this.fetchFallbackProducts();
+        }
+      } catch (e) {
+        this.recommendedProducts = [];
+        await this.fetchFallbackProducts();
+      }
+    },
+    async fetchFallbackProducts() {
+      try {
+        const res = await axios.get('http://localhost:5000/api/products?limit=4&sort=random');
+        this.fallbackProducts = res.data.products || [];
+      } catch (e) {
+        this.fallbackProducts = [];
+      }
+    },
     scrollToTop() {
       // Đảm bảo cuộn lên đầu trang khi vào ProductDetailView
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -292,6 +344,11 @@ export default {
       if (days > 0) return `${days} ngày ${hours} giờ`;
       if (hours > 0) return `${hours} giờ ${minutes} phút`;
       return `${minutes} phút`;
+    },
+    formatDate(date) {
+      if (!date) return '';
+      const d = new Date(date);
+      return d.toLocaleDateString('vi-VN');
     },
   }
 }
@@ -358,5 +415,20 @@ export default {
 }
 .benefit-orange {
   color: #fd7e14;
+}
+.partner-logo-wrapper {
+  transition: box-shadow 0.2s, transform 0.2s;
+  border: 1px solid #eee;
+}
+.partner-logo-wrapper:hover {
+  box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+  transform: translateY(-4px) scale(1.04);
+}
+.partner-logo {
+  max-width: 100%;
+  max-height: 80px;
+  object-fit: contain;
+  border-radius: 12px;
+  background: #fff;
 }
 </style>

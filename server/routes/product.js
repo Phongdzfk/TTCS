@@ -3,6 +3,7 @@ const router = express.Router();
 const productController = require('../controllers/productController');
 const multer = require('multer');
 const path = require('path');
+const { authenticateToken } = require('../controllers/authController');
 
 // Thiết lập lưu file upload
 const storage = multer.diskStorage({
@@ -24,6 +25,8 @@ router.get('/discounts', productController.getAllProductDiscounts);
 router.get('/featured', productController.getFeaturedProducts);
 // Lấy danh sách thuộc tính động cho từng category
 router.get('/attributes', productController.getFilterAttributes);
+// Lấy sản phẩm random
+router.get('/random', productController.getRandomProducts);
 // Lấy chi tiết sản phẩm theo id
 router.get('/:id', productController.getProductById);
 // Thêm sản phẩm mới
@@ -37,5 +40,7 @@ router.get('/:id/discount', productController.getDiscountOfProduct);
 
 // Gán discount cho sản phẩm
 router.post('/:id/discount', productController.assignDiscountToProduct);
+
+router.get('/recommended', authenticateToken, productController.getRecommendedProducts);
 
 module.exports = router;

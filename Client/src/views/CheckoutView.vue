@@ -128,7 +128,7 @@
                 <div class="order-items">
                   <div v-for="item in orderItems" :key="item.productId" class="order-item mb-3">
                     <div class="d-flex align-items-center">
-                      <img :src="`TTCS/server/uploads/${item.image}`" class="order-item-image rounded flex-shrink-0" :alt="item.name">
+                      <img :src="getImageUrl(item.image)" class="order-item-image rounded flex-shrink-0" :alt="item.name">
                       <div class="ms-3 flex-grow-1">
                         <div class="fw-semibold">{{ item.name }}</div>
                         <div class="d-flex justify-content-between align-items-center">
@@ -252,6 +252,11 @@ export default {
   methods: {
     formatPrice(price) {
       return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
+    },
+    getImageUrl(image) {
+      if (!image) return 'https://via.placeholder.com/300x200';
+      if (image.startsWith('http') || image.startsWith('/uploads/')) return image;
+      return 'http://localhost:5000/uploads/' + image;
     },
     async placeOrder() {
       // Chỉ kiểm tra field địa chỉ

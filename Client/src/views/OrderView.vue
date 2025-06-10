@@ -253,7 +253,7 @@
                     <td>{{ item.productName }}</td>
                     <td>
                       <img 
-                        :src="item.imageUrl ? `/uploads/${item.imageUrl}` : '/placeholder.jpg'" 
+                        :src="getImageUrl(item.imageUrl)" 
                         :alt="item.productName"
                         style="width:50px;height:50px;object-fit:cover;"
                         class="img-thumbnail"
@@ -369,6 +369,11 @@ export default {
         cancelled: 'badge bg-danger'
       };
       return classMap[status] || 'badge bg-secondary';
+    },
+    getImageUrl(image) {
+      if (!image) return 'https://via.placeholder.com/300x200';
+      if (image.startsWith('http') || image.startsWith('/uploads/')) return image;
+      return 'http://localhost:5000/uploads/' + image;
     },
     async viewOrderDetails(order) {
       try {
