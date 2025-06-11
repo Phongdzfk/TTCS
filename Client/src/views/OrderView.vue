@@ -421,8 +421,8 @@ export default {
           });
         }
 
-        alert(`Đã thêm các sản phẩm từ đơn hàng #${order.orderID} vào giỏ hàng!`);
-        this.$router.push('/cart');
+      alert(`Đã thêm các sản phẩm từ đơn hàng #${order.orderID} vào giỏ hàng!`);
+      this.$router.push('/cart');
       } catch (error) {
         console.error('Error repurchasing:', error);
         alert('Có lỗi xảy ra khi thêm sản phẩm vào giỏ hàng!');

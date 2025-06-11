@@ -19,13 +19,13 @@
       <div class="container">
         <!-- Nút mở modal filter nâng cao -->
         <div class="d-flex gap-2 mb-3">
-          <button
-            v-if="filterAttributes.length > 0"
+        <button
+          v-if="filterAttributes.length > 0"
             class="btn btn-outline-secondary"
-            @click="showFilter = true"
-          >
-            <i class="bi bi-funnel"></i> Lọc nâng cao
-          </button>
+          @click="showFilter = true"
+        >
+          <i class="bi bi-funnel"></i> Lọc nâng cao
+        </button>
           <div class="dropdown">
             <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
               <i class="bi bi-currency-dollar"></i> Lọc theo giá

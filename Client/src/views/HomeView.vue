@@ -165,9 +165,9 @@
                 Chưa có sản phẩm gợi ý, hãy khám phá thêm sản phẩm của chúng tôi!
               </div>
             </template>
-          </div>
-        </div>
-      </div>
+              </div>
+            </div>
+                </div>
 
       <!-- Banner Đối tác -->
       <div class="container-fluid py-5 bg-light">
