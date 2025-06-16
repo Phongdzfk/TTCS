@@ -139,7 +139,7 @@
                     <tr v-for="product in topProducts" :key="product.id">
                       <td>
                         <div class="d-flex align-items-center">
-                          <img :src="product.image" class="product-thumbnail me-2" :alt="product.name">
+                          <img :src="getImageUrl(product.image)" class="product-thumbnail me-2" :alt="product.name">
                           <span>{{ product.name }}</span>
                         </div>
                       </td>
@@ -213,6 +213,11 @@ export default {
   methods: {
     formatPrice(price) {
       return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
+    },
+    getImageUrl(image) {
+      if (!image) return 'https://via.placeholder.com/300x200';
+      if (image.startsWith('http') || image.startsWith('/uploads/')) return image;
+      return 'http://localhost:5000/uploads/' + image;
     },
     getStatusColor(status) {
       const colors = {
